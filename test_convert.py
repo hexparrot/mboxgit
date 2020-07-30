@@ -47,7 +47,7 @@ class Testmbox_to_git(unittest.TestCase):
 
     def test_identifies_correct_message_count(self):
         with mbox_to_git(MBOX_FP) as instance:
-            self.assertEqual(len(instance.messages), 2)
+            self.assertEqual(len(instance.messages), 3)
 
     def test_create_gitrepo_dir(self):
         self.assertFalse(os.path.exists(REPO_FP))
