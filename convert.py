@@ -16,11 +16,14 @@ __version__ = "0.0.1"
 __email__ = "wdchromium@gmail.com"
 
 class mbox_to_git(object):
-    def __init__(self, mbox_path):
+    def __init__(self, mbox_path, repodir="mboxrepo"):
         import mailbox
 
         self.mbox_fp = mbox_path
+        self.repodir = repodir
         self.mailbox = None
+        self.messages = []
+
         try:
             self.mailbox = mailbox.mbox(mbox_path)
         except IsADirectoryError:
@@ -29,6 +32,7 @@ class mbox_to_git(object):
             raise RuntimeError("provided path is not an mbox file")
         else:
             self.mailbox.lock()
+            self.messages = [msg for msg in self.mailbox]
 
     def __enter__(self):
         return self
@@ -36,3 +40,22 @@ class mbox_to_git(object):
     def __exit__(self, type, value, traceback):
         self.mailbox.unlock()
         self.mailbox.close()
+
+    def init_repo(self):
+        import os
+        try:
+            os.mkdir(self.repodir)
+        except FileExistsError:
+            raise RuntimeError("repo path already exists--it shouldn't before init_repo!")
+
+        import subprocess
+        commands = """
+        git init
+        git config user.email "%s"
+        git config user.name "%s"
+        """ % ("will@bear.home", "will")
+
+        subprocess.call(commands,
+                        stdout=subprocess.PIPE,
+                        cwd=self.repodir,
+                        shell=True)
