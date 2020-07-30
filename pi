@@ -1,0 +1,60 @@
+
+From will@raspberrypi.bear.home  Thu Jul 30 18:52:06 2020
+Return-Path: <will@raspberrypi.bear.home>
+Received: from work ([192.168.50.51])
+	by raspberrypi.bear.home (8.15.2/8.15.2/Debian-14~deb10u1) with ESMTP id 06UHq5M4000950
+	for <pi@bear.home>; Thu, 30 Jul 2020 18:52:06 +0100
+Message-ID: <db55e36846cec2eea5a5a05458b4f5cd04d8cee2.camel@bear.home>
+Subject: plaintext w/o attachment
+From: willy <will@raspberrypi.bear.home>
+To: pi@raspberrypi.bear.home
+Date: Thu, 30 Jul 2020 10:51:57 -0700
+Content-Type: text/plain
+User-Agent: Evolution 3.36.3 (3.36.3-1.fc32) 
+MIME-Version: 1.0
+Content-Transfer-Encoding: 8bit
+X-MIME-Autoconverted: from quoted-printable to 8bit by raspberrypi.bear.home id 06UHq5M4000950
+
+with body content, no attachment
+
+
+From will@raspberrypi.bear.home  Thu Jul 30 18:53:35 2020
+Return-Path: <will@raspberrypi.bear.home>
+Received: from work ([192.168.50.51])
+	by raspberrypi.bear.home (8.15.2/8.15.2/Debian-14~deb10u1) with ESMTP id 06UHrY0p001085
+	for <pi@bear.home>; Thu, 30 Jul 2020 18:53:35 +0100
+Message-ID: <e8a80e7e2e084d8633277485a0b865c7f92e8550.camel@bear.home>
+Subject: plaintext w/ rsakey attached
+From: willy <will@raspberrypi.bear.home>
+To: pi@raspberrypi.bear.home
+Date: Thu, 30 Jul 2020 10:53:26 -0700
+Content-Type: multipart/mixed; boundary="=-rA7416fwar8P5AxAoCkL"
+User-Agent: Evolution 3.36.3 (3.36.3-1.fc32) 
+MIME-Version: 1.0
+
+
+--=-rA7416fwar8P5AxAoCkL
+Content-Type: text/plain
+Content-Transfer-Encoding: quoted-printable
+
+the pubkey is attached
+
+--=-rA7416fwar8P5AxAoCkL
+Content-Type: application/vnd.ms-publisher; name="rsakey.pub"
+Content-Disposition: attachment; filename="rsakey.pub"
+Content-Transfer-Encoding: base64
+
+c3NoLXJzYSBBQUFBQjNOemFDMXljMkVBQUFBREFRQUJBQUFCZ1FERTBBenJuOVQ4UE5Bc1c0b2dI
+cXVuZVNiNUloZ2djVUl1M1lVL1hoT0pBZ0Z6cXliSERSODhmNGdZeFREVVgzQ0t3Z3lpUWl4OUlY
+RStDZWpaM1p4UGZaZDhmMXU1TW5yMGw0RThBQnZBUkhjZk8rYnE2Z05GYjdrYkRRNUpsM1RxaTZm
+Q3g4eGlJeW50VU9DSlcyR2ZQOExNbDN2aytScGRUZzZqakdPeUVGajBPSUJRU21memplMEdnY254
+TkFSeVJCalRZTHEwdGt4ZW96Q3lBaHVvdzl5SWdTUk0yWkxuUUlRNWg2WFNWNnFVZkJnTjVYZU0r
+ZWhqY2ZaeUJhMktJUXF4enRZNlJJRUNtdXhCT2I1MlVZQW5ZUDVkVVlGbm9iL2FyVllVSlNwYzZy
+T1RvR2QyMUZIOUc2VFg5NUhsV3JSRVNGa1RsTnlCcGRiaERvZlFsQXArTWVZQmtLRDJaa2lpeTIr
+QndYb1lxVWpBRjVuODZWa0l5aWx5RkU1RDZFYzR6dUQ2L2Z1bWt5ai9nVGtEWTNBYVVJcGp4aGEy
+cW93UFlDN3J2U055emRZNXp0UDF0aE5tZFZmT1R2bDNpdUZTRlNENEhsY3VXT2Fmd2g1TmFqYjd3
+MXNYQUVZZkovNTdWcklHWUc1U0xxOFdnVXRKRTYwVHNnMXk2d0U9IHVzZXJAd29yawo=
+
+
+--=-rA7416fwar8P5AxAoCkL--
+
