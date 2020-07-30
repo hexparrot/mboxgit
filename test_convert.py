@@ -100,5 +100,20 @@ class Testmbox_to_git(unittest.TestCase):
             self.assertTrue(os.path.isfile(fn_on_disk))
             self.assertEqual(fn_in_summary, 'rsakey.pub')
 
+    def test_fill_mkstemp(self):
+        with mbox_to_git(MBOX_FP) as instance:
+            instance.init_repo()
+            files_produced = instance.process_email(instance.messages[0])
+
+            fn_on_disk, fn_base, fn_in_summary = files_produced[0]
+            self.assertEqual(os.path.getsize(fn_on_disk), 34)
+
+            files_produced = instance.process_email(instance.messages[1])
+
+            fn_on_disk, fn_base, fn_in_summary = files_produced[0]
+            self.assertEqual(os.path.getsize(fn_on_disk), 23)
+            fn_on_disk, fn_base, fn_in_summary = files_produced[1]
+            self.assertEqual(os.path.getsize(fn_on_disk), 763)
+
 if __name__ == '__main__':
     unittest.main()
