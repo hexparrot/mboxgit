@@ -61,19 +61,24 @@ class mbox_to_git(object):
                         shell=True)
 
     def process_email(self, email):
-        import os
-
-        def fill_file(data):
-            import tempfile
-
+        def fill_file(data, encoding='ascii'):
             ascii_as_bytes = data.encode('ascii')
+            if encoding == 'base64':
+                import base64
+                message_bytes = base64.b64decode(ascii_as_bytes)
+            else:
+                message_bytes = ascii_as_bytes
+
+            import tempfile
             t_filedesc, t_filepath = tempfile.mkstemp(prefix='', dir=self.repodir)
             open_file = open(t_filepath, 'w+b')
-            open_file.write(ascii_as_bytes)
+            open_file.write(message_bytes)
             open_file.flush()
             open_file.close()
 
-            return (t_filedesc, t_filepath, len(ascii_as_bytes))
+            return (t_filedesc, t_filepath, len(message_bytes))
+
+        import os
 
         processed_parts = []
         split_parts = email.get_payload()
@@ -81,7 +86,8 @@ class mbox_to_git(object):
         if isinstance(split_parts, list): #this is a multipart email
             for p in split_parts:
                 final_filename = p.get_filename('body') #fallback if multipart, but not an attachment
-                tmp_filedesc, tmp_filepath, tmp_size = fill_file(p.get_payload())
+                encoding = p.get('Content-Transfer-Encoding')
+                tmp_filedesc, tmp_filepath, tmp_size = fill_file(p.get_payload(), encoding)
                 processed_parts.append( (tmp_filepath, os.path.basename(tmp_filepath), final_filename) )
         else: #single part email means content provided directly as string
             final_filename = 'body'

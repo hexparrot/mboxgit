@@ -113,7 +113,17 @@ class Testmbox_to_git(unittest.TestCase):
             fn_on_disk, fn_base, fn_in_summary = files_produced[0]
             self.assertEqual(os.path.getsize(fn_on_disk), 23)
             fn_on_disk, fn_base, fn_in_summary = files_produced[1]
-            self.assertEqual(os.path.getsize(fn_on_disk), 763)
+            self.assertEqual(os.path.getsize(fn_on_disk), 563)
+
+    def test_fill_binary_attachment(self):
+        with mbox_to_git(MBOX_FP) as instance:
+            instance.init_repo()
+            files_produced = instance.process_email(instance.messages[2])
+
+            fn_on_disk, fn_base, fn_in_summary = files_produced[0]
+            self.assertEqual(os.path.getsize(fn_on_disk), 3)
+            fn_on_disk, fn_base, fn_in_summary = files_produced[1]
+            self.assertEqual(os.path.getsize(fn_on_disk), 7716)
 
 if __name__ == '__main__':
     unittest.main()
