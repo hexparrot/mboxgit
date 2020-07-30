@@ -27,9 +27,12 @@ class mbox_to_git(object):
             raise RuntimeError("provided path is not an mbox file")
         except AttributeError:
             raise RuntimeError("provided path is not an mbox file")
+        else:
+            self.mailbox.lock()
 
     def __enter__(self):
         return self
 
     def __exit__(self, type, value, traceback):
+        self.mailbox.unlock()
         self.mailbox.close()
