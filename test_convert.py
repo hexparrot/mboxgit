@@ -6,6 +6,9 @@ import shutil
 import os
 from convert import mbox_to_git
 
+MBOX_FP = 'pi'
+REPO_FP = 'mboxrepo'
+
 class Testmbox_to_git(unittest.TestCase):
     def setUp(self):
         try:
@@ -28,11 +31,11 @@ class Testmbox_to_git(unittest.TestCase):
             with mbox_to_git('/home') as instance:
                 pass
 
-        with mbox_to_git('pi') as instance:
-            self.assertEqual(instance.mbox_fp, 'pi')
+        with mbox_to_git(MBOX_FP) as instance:
+            self.assertEqual(instance.mbox_fp, MBOX_FP)
 
     def test_mbox_context_manager(self):
-        with mbox_to_git('pi') as instance:
+        with mbox_to_git(MBOX_FP) as instance:
             pass
 
     # commented out because this arrangement doesn't close the mbox after raising
@@ -43,33 +46,33 @@ class Testmbox_to_git(unittest.TestCase):
     #                pass
 
     def test_identifies_correct_message_count(self):
-        with mbox_to_git('pi') as instance:
+        with mbox_to_git(MBOX_FP) as instance:
             self.assertEqual(len(instance.messages), 2)
 
     def test_create_gitrepo_dir(self):
-        self.assertFalse(os.path.exists('mboxrepo'))
-        with mbox_to_git('pi') as instance:
+        self.assertFalse(os.path.exists(REPO_FP))
+        with mbox_to_git(MBOX_FP) as instance:
             instance.init_repo()
-            self.assertEqual(instance.repodir, 'mboxrepo')
-        self.assertTrue(os.path.exists('mboxrepo'))
-        shutil.rmtree('mboxrepo')
+            self.assertEqual(instance.repodir, REPO_FP)
+        self.assertTrue(os.path.exists(REPO_FP))
+        shutil.rmtree(REPO_FP)
 
         self.assertFalse(os.path.exists('mboxrepo'))
-        with mbox_to_git('pi', 'mboxrepo') as instance:
+        with mbox_to_git(MBOX_FP, 'mboxrepo') as instance:
             instance.init_repo()
             self.assertEqual(instance.repodir, 'mboxrepo')
         self.assertTrue(os.path.exists('mboxrepo'))
         shutil.rmtree('mboxrepo')
 
         self.assertFalse(os.path.exists('mboxrepo2'))
-        with mbox_to_git('pi', 'mboxrepo2') as instance:
+        with mbox_to_git(MBOX_FP, 'mboxrepo2') as instance:
             instance.init_repo()
             self.assertEqual(instance.repodir, 'mboxrepo2')
         self.assertTrue(os.path.exists('mboxrepo2'))
         shutil.rmtree('mboxrepo2')
 
     def test_init_git_repo(self):
-        with mbox_to_git('pi') as instance:
+        with mbox_to_git(MBOX_FP) as instance:
             instance.init_repo()
             self.assertTrue(os.path.exists(os.path.join(instance.repodir, '.git')))
             with self.assertRaises(RuntimeError):
