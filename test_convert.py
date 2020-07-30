@@ -13,15 +13,22 @@ class Testmbox_to_git(unittest.TestCase):
 
     def test_accepts_mailbox_filepath(self):
         with self.assertRaises(TypeError):
-            instance = mbox_to_git()
+            with mbox_to_git() as instance:
+                pass
 
         with self.assertRaises(RuntimeError):
-            instance = mbox_to_git('/')
+            with mbox_to_git('/') as instance:
+                pass
         with self.assertRaises(RuntimeError):
-            instance = mbox_to_git('/home')
+            with mbox_to_git('/home') as instance:
+                pass
 
-        instance = mbox_to_git('pi')
-        self.assertEqual(instance.mbox_fp, 'pi')
+        with mbox_to_git('pi') as instance:
+            self.assertEqual(instance.mbox_fp, 'pi')
+
+    def test_mbox_context_manager(self):
+        with mbox_to_git('pi') as instance:
+            pass
 
 if __name__ == '__main__':
     unittest.main()
