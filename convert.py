@@ -59,3 +59,23 @@ class mbox_to_git(object):
                         stdout=subprocess.PIPE,
                         cwd=self.repodir,
                         shell=True)
+
+    def process_email(self, email):
+        import tempfile
+        import os
+
+        processed_parts = []
+        split_parts = email.get_payload()
+
+        tmp_filedesc, tmp_filepath = tempfile.mkstemp(prefix='', dir=self.repodir)
+
+        if isinstance(split_parts, list): #this is a multipart email
+            for p in split_parts:
+                final_filename = p.get_filename('body')
+                processed_parts.append( (tmp_filepath, os.path.basename(tmp_filepath), final_filename) )
+        else: #single part email means content provided directly as string
+            final_filename = 'body'
+            processed_parts.append( (tmp_filepath, os.path.basename(tmp_filepath), final_filename) )
+
+        return processed_parts
+

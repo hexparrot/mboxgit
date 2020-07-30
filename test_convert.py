@@ -79,5 +79,26 @@ class Testmbox_to_git(unittest.TestCase):
                 instance.init_repo()
             self.assertTrue(os.path.exists(os.path.join(instance.repodir, '.git')))
 
+    def test_create_mkstemp(self):
+        with mbox_to_git(MBOX_FP) as instance:
+            instance.init_repo()
+            files_produced = instance.process_email(instance.messages[0])
+            self.assertEqual(len(files_produced), 1) #just body
+
+            fn_on_disk, fn_base, fn_in_summary = files_produced[0]
+            self.assertTrue(os.path.isfile(fn_on_disk))
+            self.assertEqual(fn_in_summary, 'body')
+
+            files_produced = instance.process_email(instance.messages[1])
+            self.assertEqual(len(files_produced), 2) #body and attachment
+
+            fn_on_disk, fn_base, fn_in_summary = files_produced[0]
+            self.assertTrue(os.path.isfile(fn_on_disk))
+            self.assertEqual(fn_in_summary, 'body')
+
+            fn_on_disk, fn_base, fn_in_summary = files_produced[1]
+            self.assertTrue(os.path.isfile(fn_on_disk))
+            self.assertEqual(fn_in_summary, 'rsakey.pub')
+
 if __name__ == '__main__':
     unittest.main()
