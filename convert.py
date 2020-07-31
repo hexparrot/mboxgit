@@ -145,6 +145,21 @@ class mbox_to_git(object):
         else:
             return output.strip().decode('ascii')
 
+    @property
+    def commit_count(self):
+        import subprocess
+
+        commands = "git rev-list --count HEAD"
+        try:
+            output = subprocess.check_output(commands,
+                                             cwd=self.repodir,
+                                             stderr=subprocess.DEVNULL,
+                                             shell=True)
+        except (subprocess.CalledProcessError, FileNotFoundError):
+            return 0
+        else:
+            return int(output.strip().decode('ascii'))
+
     def get_commit_of_file(self, fn):
         import subprocess
 
