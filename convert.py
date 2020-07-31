@@ -172,11 +172,17 @@ class mbox_to_git(object):
     def get_commit_filelist(self, commit):
         import subprocess
 
-        commands = "git diff-tree --no-commit-id --name-only -r %s" % commit 
+        commands = "git show --no-commit-id --name-only -r %s" % commit 
         output = subprocess.check_output(commands,
                                          cwd=self.repodir,
                                          shell=True)
-        return output.strip().decode('ascii').split('\n')
+        
+        line_output = output.strip().decode('ascii').split('\n')
+        retval = []
+        for line in line_output:
+            if len(line)==47 and line.startswith('commit'): break
+            retval.append(line)
+        return retval
 
 if __name__ == '__main__':
     with mbox_to_git('pi') as instance:

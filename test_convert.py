@@ -207,10 +207,6 @@ class Testmbox_to_git(unittest.TestCase):
     def test_get_commit_filelist(self):
         with mbox_to_git(MBOX_FP) as instance:
             instance.init_repo()
-            # needs a new test: why cant this succeed without messages[0] being parsed?
-            subject, files_produced = instance.process_email(instance.messages[0])
-            summary = instance.create_summary(files_produced)
-            commit = instance.make_commit(subject, summary)
 
             subject, files_produced = instance.process_email(instance.messages[1])
             summary = instance.create_summary(files_produced)
