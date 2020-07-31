@@ -41,12 +41,13 @@ class mbox_to_git(object):
         self.mailbox.unlock()
         self.mailbox.close()
 
-    def init_repo(self):
+    def init_repo(self, abort_if_exists=False):
         import os
         try:
             os.mkdir(self.repodir)
         except FileExistsError:
-            raise RuntimeError("repo path already exists--it shouldn't before init_repo!")
+            if abort_if_exists:
+                raise RuntimeError("repo path already exists--it shouldn't before init_repo!")
 
         import subprocess
         subprocess.call("git init",

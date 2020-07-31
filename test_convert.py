@@ -75,9 +75,6 @@ class Testmbox_to_git(unittest.TestCase):
         with mbox_to_git(MBOX_FP) as instance:
             instance.init_repo()
             self.assertTrue(os.path.exists(os.path.join(instance.repodir, '.git')))
-            with self.assertRaises(RuntimeError):
-                instance.init_repo()
-            self.assertTrue(os.path.exists(os.path.join(instance.repodir, '.git')))
 
     def test_create_mkstemp(self):
         with mbox_to_git(MBOX_FP) as instance:
@@ -167,6 +164,13 @@ class Testmbox_to_git(unittest.TestCase):
             subject, files_produced = instance.process_email(instance.messages[0])
             summary = instance.create_summary(files_produced)
             self.assertEqual(instance.make_commit(subject, summary), 0)
+
+    def test_init_repo_graceful_reuse(self):
+        with mbox_to_git(MBOX_FP) as instance:
+            instance.init_repo()
+            instance.init_repo(abort_if_exists=False)
+            with self.assertRaises(RuntimeError):
+                instance.init_repo(abort_if_exists=True)
 
 if __name__ == '__main__':
     unittest.main()
