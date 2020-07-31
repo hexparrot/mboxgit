@@ -128,6 +128,24 @@ class mbox_to_git(object):
                                   shell=True)
         return retcode
 
+    @property
+    def head_id(self):
+        import subprocess
+
+        commands = "git rev-parse --short HEAD"
+        try:
+            output = subprocess.check_output(commands,
+                                  cwd=self.repodir,
+                                  stderr=subprocess.DEVNULL,
+                                  shell=True)
+        except subprocess.CalledProcessError:
+            return None
+            # Command 'git rev-parse --short HEAD' returned non-zero exit status 128.
+            # thrown when no repository yet init'ed
+        else:
+            return output.strip().decode('ascii')
+
+
 if __name__ == '__main__':
     with mbox_to_git('pi') as instance:
         instance.init_repo()

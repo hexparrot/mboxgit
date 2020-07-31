@@ -172,5 +172,16 @@ class Testmbox_to_git(unittest.TestCase):
             with self.assertRaises(RuntimeError):
                 instance.init_repo(abort_if_exists=True)
 
+    def test_get_git_head_commit(self):
+        with mbox_to_git(MBOX_FP) as instance:
+            instance.init_repo()
+            subject, files_produced = instance.process_email(instance.messages[0])
+            summary = instance.create_summary(files_produced)
+            self.assertIsNone(instance.head_id)
+            instance.make_commit(subject, summary)
+            short_commit = instance.head_id
+            self.assertTrue(len(short_commit) >= 5)
+            self.assertIsInstance(short_commit, str)
+
 if __name__ == '__main__':
     unittest.main()
