@@ -180,7 +180,8 @@ class mbox_to_git(object):
         line_output = output.strip().decode('ascii').split('\n')
         retval = []
         for line in line_output:
-            if len(line)==47 and line.startswith('commit'): break
+            split = line.split(' ')
+            if len(split[0])==6 and len(split[1])==40 and split[0]=='commit': break
             retval.append(line)
         return retval
 
