@@ -132,7 +132,7 @@ class mbox_to_git(object):
     def head_id(self):
         import subprocess
 
-        commands = "git rev-parse --short HEAD"
+        commands = "git rev-parse HEAD"
         try:
             output = subprocess.check_output(commands,
                                   cwd=self.repodir,
@@ -154,6 +154,14 @@ class mbox_to_git(object):
                                          shell=True)
         return output.strip().decode('ascii')
 
+    def get_commit_filelist(self, commit):
+        import subprocess
+
+        commands = "git diff-tree --no-commit-id --name-only -r %s" % commit 
+        output = subprocess.check_output(commands,
+                                         cwd=self.repodir,
+                                         shell=True)
+        return output.strip().decode('ascii').split('\n')
 
 if __name__ == '__main__':
     with mbox_to_git('pi') as instance:

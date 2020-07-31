@@ -164,7 +164,7 @@ class Testmbox_to_git(unittest.TestCase):
             subject, files_produced = instance.process_email(instance.messages[0])
             summary = instance.create_summary(files_produced)
             short_commit = instance.make_commit(subject, summary)
-            self.assertTrue(len(short_commit) >= 5)
+            self.assertTrue(len(short_commit) == 40)
             self.assertIsInstance(short_commit, str)
 
     def test_init_repo_graceful_reuse(self):
@@ -181,12 +181,11 @@ class Testmbox_to_git(unittest.TestCase):
             summary = instance.create_summary(files_produced)
             self.assertIsNone(instance.head_id)
             instance.make_commit(subject, summary)
-            short_commit = instance.head_id
-            self.assertTrue(len(short_commit) >= 5)
-            self.assertIsInstance(short_commit, str)
+            head_commit = instance.head_id
+            self.assertTrue(len(head_commit) == 40)
+            self.assertIsInstance(head_commit, str)
 
     def test_get_commit_by_stored_filename(self):
-        # assumption: --short SHA-1 being a substring to --long SHA1 = match
         with mbox_to_git(MBOX_FP) as instance:
             instance.init_repo()
 
@@ -199,7 +198,30 @@ class Testmbox_to_git(unittest.TestCase):
             matching_commit = instance.get_commit_of_file(mapped_filename)
             self.assertTrue(len(matching_commit) == 40)
             self.assertIsInstance(matching_commit, str)
-            self.assertTrue(matching_commit.startswith(created_commit))
+            self.assertEqual(matching_commit, created_commit)
+
+    def test_get_commit_filelist(self):
+        with mbox_to_git(MBOX_FP) as instance:
+            instance.init_repo()
+            # needs a new test: why cant this succeed without messages[0] being parsed?
+            subject, files_produced = instance.process_email(instance.messages[0])
+            summary = instance.create_summary(files_produced)
+            commit = instance.make_commit(subject, summary)
+
+            subject, files_produced = instance.process_email(instance.messages[1])
+            summary = instance.create_summary(files_produced)
+            commit = instance.make_commit(subject, summary)
+            
+            found = None
+            for s in summary:
+                if s.split(':')[1] == 'rsakey.pub':
+                    found = s
+
+            mapped_filename, dest_filename, _ = s.split(':')
+            matching_commit = instance.get_commit_of_file(mapped_filename)
+            file_list = instance.get_commit_filelist(matching_commit)
+            self.assertTrue(mapped_filename in file_list)
+            self.assertEqual(len(file_list), 2)
 
 if __name__ == '__main__':
     unittest.main()
