@@ -58,14 +58,14 @@ class Testmbox_to_git(unittest.TestCase):
         shutil.rmtree(REPO_FP)
 
         self.assertFalse(os.path.exists('mboxrepo'))
-        with mbox_to_git(MBOX_FP, 'mboxrepo') as instance:
+        with mbox_to_git(MBOX_FP, repodir='mboxrepo') as instance:
             instance.init_repo()
             self.assertEqual(instance.repodir, 'mboxrepo')
         self.assertTrue(os.path.exists('mboxrepo'))
         shutil.rmtree('mboxrepo')
 
         self.assertFalse(os.path.exists('mboxrepo2'))
-        with mbox_to_git(MBOX_FP, 'mboxrepo2') as instance:
+        with mbox_to_git(MBOX_FP, repodir='mboxrepo2') as instance:
             instance.init_repo()
             self.assertEqual(instance.repodir, 'mboxrepo2')
         self.assertTrue(os.path.exists('mboxrepo2'))
@@ -124,6 +124,21 @@ class Testmbox_to_git(unittest.TestCase):
             self.assertEqual(os.path.getsize(fn_on_disk), 3)
             fn_on_disk, fn_base, fn_in_summary = files_produced[1]
             self.assertEqual(os.path.getsize(fn_on_disk), 7716)
+
+    def test_set_git_user(self):
+        import configparser
+        config = configparser.ConfigParser()
+
+        with mbox_to_git(MBOX_FP) as instance:
+            instance.init_repo()
+            config.read(os.path.join(REPO_FP, '.git', 'config'))
+            self.assertEqual(config['user']['name'], MBOX_FP)
+            self.assertEqual(config['user']['email'], "%s@local" % MBOX_FP)
+
+            instance.set_user('will', 'will@bear.home')
+            config.read(os.path.join(REPO_FP, '.git', 'config'))
+            self.assertEqual(config['user']['name'], 'will')
+            self.assertEqual(config['user']['email'], 'will@bear.home')
 
 if __name__ == '__main__':
     unittest.main()

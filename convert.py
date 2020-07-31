@@ -49,11 +49,20 @@ class mbox_to_git(object):
             raise RuntimeError("repo path already exists--it shouldn't before init_repo!")
 
         import subprocess
+        subprocess.call("git init",
+                        stdout=subprocess.PIPE,
+                        cwd=self.repodir,
+                        shell=True)
+
+        from getpass import getuser
+        self.set_user(getuser(), "%s@local" % getuser())
+
+    def set_user(self, user, email):
+        import subprocess
         commands = """
-        git init
-        git config user.email "%s"
         git config user.name "%s"
-        """ % ("will@bear.home", "will")
+        git config user.email "%s"
+        """ % (user, email)
 
         subprocess.call(commands,
                         stdout=subprocess.PIPE,
