@@ -91,6 +91,7 @@ class mbox_to_git(object):
 
         processed_parts = []
         split_parts = email.get_payload()
+        subject = email.get('subject')
 
         if isinstance(split_parts, list): #this is a multipart email
             for p in split_parts:
@@ -103,7 +104,7 @@ class mbox_to_git(object):
             tmp_filedesc, tmp_filepath, tmp_size = fill_file(split_parts)
             processed_parts.append( (tmp_filepath, final_filename, tmp_size) )
 
-        return processed_parts
+        return (subject, processed_parts)
 
     def create_summary(self, processed_parts):
         import os
@@ -113,13 +114,13 @@ class mbox_to_git(object):
             summary.append("%s:%s:%i" % (os.path.basename(fp), final_name, fsize))
         return summary
 
-    def make_commit(self, summary):
+    def make_commit(self, subject, summary):
         import subprocess
 
         commands = """
         git add .;
         git commit -m "%s" -m "%s";
-        """ % ('new submission', '\n'.join(summary))
+        """ % (subject, '\n'.join(summary))
         retcode = subprocess.call(commands,
                                   stdout=subprocess.PIPE,
                                   cwd=self.repodir,
