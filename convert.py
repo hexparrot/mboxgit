@@ -105,3 +105,9 @@ class mbox_to_git(object):
 
         return processed_parts
 
+    def ready_commit(self, processed_parts):
+        import os
+        summary = []
+        for fp, basename, final_name in processed_parts:
+            summary.append("%s:%s:%i" % (basename, final_name, os.path.getsize(fp)))
+        return summary

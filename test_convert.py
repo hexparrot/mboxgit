@@ -140,5 +140,17 @@ class Testmbox_to_git(unittest.TestCase):
             self.assertEqual(config['user']['name'], 'will')
             self.assertEqual(config['user']['email'], 'will@bear.home')
 
+    def test_ready_commit(self):
+        with mbox_to_git(MBOX_FP) as instance:
+            instance.init_repo()
+            files_produced = instance.process_email(instance.messages[0])
+
+            new_commit = instance.ready_commit(files_produced)
+            self.assertEqual(len(new_commit), 1)
+            split_up = new_commit[0].split(':')
+            self.assertEqual(len(split_up[0]), 8)
+            self.assertEqual(split_up[1], 'body')
+            self.assertEqual(split_up[2], '34')
+
 if __name__ == '__main__':
     unittest.main()
