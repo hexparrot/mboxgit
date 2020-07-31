@@ -85,18 +85,18 @@ class Testmbox_to_git(unittest.TestCase):
             files_produced = instance.process_email(instance.messages[0])
             self.assertEqual(len(files_produced), 1) #just body
 
-            fn_on_disk, fn_base, fn_in_summary = files_produced[0]
+            fn_on_disk, fn_in_summary, fsize = files_produced[0]
             self.assertTrue(os.path.isfile(fn_on_disk))
             self.assertEqual(fn_in_summary, 'body')
 
             files_produced = instance.process_email(instance.messages[1])
             self.assertEqual(len(files_produced), 2) #body and attachment
 
-            fn_on_disk, fn_base, fn_in_summary = files_produced[0]
+            fn_on_disk, fn_in_summary, fsize = files_produced[0]
             self.assertTrue(os.path.isfile(fn_on_disk))
             self.assertEqual(fn_in_summary, 'body')
 
-            fn_on_disk, fn_base, fn_in_summary = files_produced[1]
+            fn_on_disk, fn_in_summary, fsize = files_produced[1]
             self.assertTrue(os.path.isfile(fn_on_disk))
             self.assertEqual(fn_in_summary, 'rsakey.pub')
 
@@ -105,25 +105,32 @@ class Testmbox_to_git(unittest.TestCase):
             instance.init_repo()
             files_produced = instance.process_email(instance.messages[0])
 
-            fn_on_disk, fn_base, fn_in_summary = files_produced[0]
+            fn_on_disk, fn_in_summary, fsize = files_produced[0]
             self.assertEqual(os.path.getsize(fn_on_disk), 34)
+            self.assertEqual(os.path.getsize(fn_on_disk), fsize)
 
             files_produced = instance.process_email(instance.messages[1])
 
-            fn_on_disk, fn_base, fn_in_summary = files_produced[0]
+            fn_on_disk, fn_in_summary, fsize = files_produced[0]
             self.assertEqual(os.path.getsize(fn_on_disk), 23)
-            fn_on_disk, fn_base, fn_in_summary = files_produced[1]
+            self.assertEqual(os.path.getsize(fn_on_disk), fsize)
+
+            fn_on_disk, fn_in_summary, fsize = files_produced[1]
             self.assertEqual(os.path.getsize(fn_on_disk), 563)
+            self.assertEqual(os.path.getsize(fn_on_disk), fsize)
 
     def test_fill_binary_attachment(self):
         with mbox_to_git(MBOX_FP) as instance:
             instance.init_repo()
             files_produced = instance.process_email(instance.messages[2])
 
-            fn_on_disk, fn_base, fn_in_summary = files_produced[0]
+            fn_on_disk, fn_in_summary, fsize = files_produced[0]
             self.assertEqual(os.path.getsize(fn_on_disk), 3)
-            fn_on_disk, fn_base, fn_in_summary = files_produced[1]
+            self.assertEqual(os.path.getsize(fn_on_disk), fsize)
+
+            fn_on_disk, fn_in_summary, fsize = files_produced[1]
             self.assertEqual(os.path.getsize(fn_on_disk), 7716)
+            self.assertEqual(os.path.getsize(fn_on_disk), fsize)
 
     def test_set_git_user(self):
         import configparser
@@ -140,15 +147,15 @@ class Testmbox_to_git(unittest.TestCase):
             self.assertEqual(config['user']['name'], 'will')
             self.assertEqual(config['user']['email'], 'will@bear.home')
 
-    def test_ready_commit(self):
+    def test_create_summary(self):
         with mbox_to_git(MBOX_FP) as instance:
             instance.init_repo()
             files_produced = instance.process_email(instance.messages[0])
 
-            new_commit = instance.ready_commit(files_produced)
+            new_commit = instance.create_summary(files_produced)
             self.assertEqual(len(new_commit), 1)
             split_up = new_commit[0].split(':')
-            self.assertEqual(len(split_up[0]), 8)
+            self.assertTrue(4 <= len(split_up[0]) <= 8) # length variable (def min: 4)
             self.assertEqual(split_up[1], 'body')
             self.assertEqual(split_up[2], '34')
 

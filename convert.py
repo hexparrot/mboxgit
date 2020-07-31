@@ -97,17 +97,17 @@ class mbox_to_git(object):
                 final_filename = p.get_filename('body') #fallback if multipart, but not an attachment
                 encoding = p.get('Content-Transfer-Encoding')
                 tmp_filedesc, tmp_filepath, tmp_size = fill_file(p.get_payload(), encoding)
-                processed_parts.append( (tmp_filepath, os.path.basename(tmp_filepath), final_filename) )
+                processed_parts.append( (tmp_filepath, final_filename, tmp_size) )
         else: #single part email means content provided directly as string
             final_filename = 'body'
             tmp_filedesc, tmp_filepath, tmp_size = fill_file(split_parts)
-            processed_parts.append( (tmp_filepath, os.path.basename(tmp_filepath), final_filename) )
+            processed_parts.append( (tmp_filepath, final_filename, tmp_size) )
 
         return processed_parts
 
-    def ready_commit(self, processed_parts):
+    def create_summary(self, processed_parts):
         import os
         summary = []
-        for fp, basename, final_name in processed_parts:
-            summary.append("%s:%s:%i" % (basename, final_name, os.path.getsize(fp)))
+        for fp, final_name, fsize in processed_parts:
+            summary.append("%s:%s:%i" % (os.path.basename(fp), final_name, fsize))
         return summary
