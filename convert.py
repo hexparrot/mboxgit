@@ -127,3 +127,11 @@ class mbox_to_git(object):
                                   shell=True)
         return retcode
 
+if __name__ == '__main__':
+    with mbox_to_git('pi') as instance:
+        instance.init_repo()
+        for msg in instance.messages:
+            subject, files_produced = instance.process_email(msg)
+            summary = instance.create_summary(files_produced)
+            instance.make_commit(subject, summary)
+
