@@ -122,11 +122,11 @@ class mbox_to_git(object):
         git add .;
         git commit -m "%s" -m "%s";
         """ % (subject, '\n'.join(summary))
-        retcode = subprocess.call(commands,
-                                  stdout=subprocess.PIPE,
-                                  cwd=self.repodir,
-                                  shell=True)
-        return retcode
+        subprocess.call(commands,
+                        stdout=subprocess.PIPE,
+                        cwd=self.repodir,
+                        shell=True)
+        return self.head_id
 
     @property
     def head_id(self):

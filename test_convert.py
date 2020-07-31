@@ -163,7 +163,9 @@ class Testmbox_to_git(unittest.TestCase):
             instance.init_repo()
             subject, files_produced = instance.process_email(instance.messages[0])
             summary = instance.create_summary(files_produced)
-            self.assertEqual(instance.make_commit(subject, summary), 0)
+            short_commit = instance.make_commit(subject, summary)
+            self.assertTrue(len(short_commit) >= 5)
+            self.assertIsInstance(short_commit, str)
 
     def test_init_repo_graceful_reuse(self):
         with mbox_to_git(MBOX_FP) as instance:
