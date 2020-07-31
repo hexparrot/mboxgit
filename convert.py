@@ -191,5 +191,10 @@ if __name__ == '__main__':
         for msg in instance.messages:
             subject, files_produced = instance.process_email(msg)
             summary = instance.create_summary(files_produced)
-            instance.make_commit(subject, summary)
+            commit_id = instance.make_commit(subject, summary)
+
+            print("%s: %s" % (commit_id, subject))
+            for s in summary:
+                p = s.split(':')
+                print("%s -> %s (%s)" % (p[0], p[1], p[2]))
 
