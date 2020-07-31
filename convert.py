@@ -107,7 +107,22 @@ class mbox_to_git(object):
 
     def create_summary(self, processed_parts):
         import os
+
         summary = []
         for fp, final_name, fsize in processed_parts:
             summary.append("%s:%s:%i" % (os.path.basename(fp), final_name, fsize))
         return summary
+
+    def make_commit(self, summary):
+        import subprocess
+
+        commands = """
+        git add .;
+        git commit -m "%s" -m "%s";
+        """ % ('new submission', '\n'.join(summary))
+        retcode = subprocess.call(commands,
+                                  stdout=subprocess.PIPE,
+                                  cwd=self.repodir,
+                                  shell=True)
+        return retcode
+

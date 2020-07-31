@@ -150,14 +150,23 @@ class Testmbox_to_git(unittest.TestCase):
     def test_create_summary(self):
         with mbox_to_git(MBOX_FP) as instance:
             instance.init_repo()
-            files_produced = instance.process_email(instance.messages[0])
 
-            new_commit = instance.create_summary(files_produced)
-            self.assertEqual(len(new_commit), 1)
-            split_up = new_commit[0].split(':')
+            files_produced = instance.process_email(instance.messages[0])
+            summary = instance.create_summary(files_produced)
+
+            self.assertEqual(len(summary), len(files_produced))
+            self.assertEqual(len(summary), 1)
+            split_up = summary[0].split(':')
             self.assertTrue(4 <= len(split_up[0]) <= 8) # length variable (def min: 4)
             self.assertEqual(split_up[1], 'body')
             self.assertEqual(split_up[2], '34')
+
+    def test_make_commit(self):
+        with mbox_to_git(MBOX_FP) as instance:
+            instance.init_repo()
+            files_produced = instance.process_email(instance.messages[0])
+            summary = instance.create_summary(files_produced)
+            self.assertEqual(instance.make_commit(summary), 0)
 
 if __name__ == '__main__':
     unittest.main()
