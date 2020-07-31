@@ -145,6 +145,15 @@ class mbox_to_git(object):
         else:
             return output.strip().decode('ascii')
 
+    def get_commit_of_file(self, fn):
+        import subprocess
+
+        commands = "git rev-list -1 HEAD %s" % fn
+        output = subprocess.check_output(commands,
+                                         cwd=self.repodir,
+                                         shell=True)
+        return output.strip().decode('ascii')
+
 
 if __name__ == '__main__':
     with mbox_to_git('pi') as instance:

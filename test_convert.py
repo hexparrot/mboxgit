@@ -185,5 +185,21 @@ class Testmbox_to_git(unittest.TestCase):
             self.assertTrue(len(short_commit) >= 5)
             self.assertIsInstance(short_commit, str)
 
+    def test_get_commit_by_stored_filename(self):
+        # assumption: --short SHA-1 being a substring to --long SHA1 = match
+        with mbox_to_git(MBOX_FP) as instance:
+            instance.init_repo()
+
+            subject, files_produced = instance.process_email(instance.messages[1])
+            summary = instance.create_summary(files_produced)
+            created_commit = instance.make_commit(subject, summary)
+            
+            self.assertTrue('rsakey.pub' in summary[1])
+            mapped_filename = summary[1].split(':')[0]
+            matching_commit = instance.get_commit_of_file(mapped_filename)
+            self.assertTrue(len(matching_commit) == 40)
+            self.assertIsInstance(matching_commit, str)
+            self.assertTrue(matching_commit.startswith(created_commit))
+
 if __name__ == '__main__':
     unittest.main()
