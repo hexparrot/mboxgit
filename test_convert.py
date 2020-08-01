@@ -256,5 +256,16 @@ class Testmbox_to_git(unittest.TestCase):
             self.assertTrue(os.path.isfile(os.path.join(instance.repodir, filename + '.secret')))
             self.assertFalse(os.path.isfile(os.path.join(instance.repodir, filename)))
 
+    def test_tree_clean(self):
+        with mbox_to_git(MBOX_FP) as instance:
+            instance.init_repo()
+
+            self.assertTrue(instance.clean)
+            subject, files_produced = instance.process_email(instance.messages[0])
+            self.assertFalse(instance.clean)
+            summary = instance.create_summary(files_produced)
+            commit = instance.make_commit(subject, summary)
+            self.assertTrue(instance.clean)
+
 if __name__ == '__main__':
     unittest.main()

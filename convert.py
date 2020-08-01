@@ -218,6 +218,16 @@ class mbox_to_git(object):
         else:
             return int(output.strip().decode('ascii'))
 
+    @property
+    def clean(self):
+        import subprocess
+
+        commands = "git status --porcelain"
+        output = subprocess.check_output(commands,
+                                         cwd=self.repodir,
+                                         shell=True)
+        return not bool(output.strip())
+
     def get_commit_of_file(self, fn):
         import subprocess
 
