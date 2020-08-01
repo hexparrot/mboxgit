@@ -273,5 +273,35 @@ class Testmbox_to_git(unittest.TestCase):
             commit = instance.make_commit(subject, summary)
             self.assertTrue(instance.clean)
 
+    def test_decorator_check_clean_before(self):
+        with mbox_to_git(MBOX_FP) as instance:
+            instance.init_repo()
+
+            wrapped_one = instance.check_clean_before(instance.process_email)
+            wrapped_two = instance.check_clean_before(instance.create_summary)
+
+            subject, files_produced = wrapped_one(instance.messages[0])
+            self.assertIsInstance(subject, str)
+            self.assertIsInstance(files_produced, list)
+            with self.assertRaises(RuntimeError):
+                summary = wrapped_two(files_produced)
+
+    def test_decorator_check_clean_after(self):
+        with mbox_to_git(MBOX_FP) as instance:
+            instance.init_repo()
+
+            wrapped_one = instance.check_clean_after(instance.process_email)
+            wrapped_two = instance.check_clean_after(instance.make_commit)
+
+            with self.assertRaises(RuntimeError):
+                subject, files_produced = wrapped_one(instance.messages[0])
+
+            subject, files_produced = instance.process_email(instance.messages[0])
+            summary = instance.create_summary(files_produced)
+
+            commit = wrapped_two(subject, summary)
+            self.assertTrue(len(commit) == 40)
+            self.assertIsInstance(commit, str)
+
 if __name__ == '__main__':
     unittest.main()
