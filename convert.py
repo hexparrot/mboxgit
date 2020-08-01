@@ -155,6 +155,37 @@ class mbox_to_git(object):
                         shell=True)
         return self.head_id
 
+    def make_secret_commit(self, subject, summary):
+        import subprocess
+        import os
+
+        ignored_files = []
+        added_files = []
+        encrypted_summary = []
+        with open(os.path.join(self.repodir, '.gitignore'), 'a') as gi:
+            for s in summary:
+                orig_name = s.split(':')[0]
+                ignored_files.append("git secret add %s;" % orig_name)
+                added_files.append("git add %s.secret" % orig_name)
+                encrypted_summary.append(s.replace(':', '.secret:', 1))
+                gi.write("%s\n" % orig_name)
+
+        commands = """
+        %s
+        git secret hide
+        %s
+        git commit -m "%s" -m "%s";
+        """ % ('\n'.join(ignored_files),
+               '\n'.join(added_files),
+               subject,
+               '\n'.join(encrypted_summary))
+
+        subprocess.call(commands,
+                        stdout=subprocess.PIPE,
+                        cwd=self.repodir,
+                        shell=True)
+        return self.head_id
+
     @property
     def head_id(self):
         import subprocess
