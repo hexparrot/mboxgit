@@ -223,5 +223,12 @@ class Testmbox_to_git(unittest.TestCase):
             self.assertTrue(mapped_filename in file_list)
             self.assertEqual(len(file_list), 2)
 
+    def test_init_secret(self):
+        with mbox_to_git(MBOX_FP) as instance:
+            self.assertEqual(instance.commit_count, 0)
+            instance.init_repo(encrypted=True)
+            self.assertTrue(os.path.exists(os.path.join(instance.repodir, '.gitsecret')))
+            self.assertEqual(instance.commit_count, 1)
+
 if __name__ == '__main__':
     unittest.main()

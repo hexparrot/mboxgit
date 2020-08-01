@@ -41,7 +41,9 @@ class mbox_to_git(object):
         self.mailbox.unlock()
         self.mailbox.close()
 
-    def init_repo(self, abort_if_exists=False):
+    def init_repo(self,
+                  abort_if_exists=False,
+                  encrypted=False):
         import os
         try:
             os.mkdir(self.repodir)
@@ -54,6 +56,17 @@ class mbox_to_git(object):
                         stdout=subprocess.PIPE,
                         cwd=self.repodir,
                         shell=True)
+
+        if encrypted:
+            commands = """
+            git secret init;
+            git add .;
+            git commit -m "initializing git-secret module";
+            """
+            subprocess.call(commands,
+                            stdout=subprocess.PIPE,
+                            cwd=self.repodir,
+                            shell=True)
 
         from getpass import getuser
         self.set_user(getuser(), "%s@local" % getuser())
