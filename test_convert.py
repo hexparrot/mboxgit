@@ -77,6 +77,7 @@ class Testmbox_to_git(unittest.TestCase):
             instance.init_repo()
             self.assertTrue(os.path.exists(os.path.join(instance.repodir, '.git')))
             self.assertEqual(instance.commit_count, 0)
+            self.assertTrue(instance.clean)
 
     def test_create_mkstemp(self):
         with mbox_to_git(MBOX_FP) as instance:
@@ -163,6 +164,7 @@ class Testmbox_to_git(unittest.TestCase):
     def test_make_commit(self):
         with mbox_to_git(MBOX_FP) as instance:
             instance.init_repo()
+            self.assertTrue(instance.clean)
             subject, files_produced = instance.process_email(instance.messages[0])
             summary = instance.create_summary(files_produced)
             self.assertEqual(instance.commit_count, 0)
@@ -170,6 +172,7 @@ class Testmbox_to_git(unittest.TestCase):
             self.assertTrue(len(short_commit) == 40)
             self.assertIsInstance(short_commit, str)
             self.assertEqual(instance.commit_count, 1)
+            self.assertTrue(instance.clean)
 
     def test_init_repo_graceful_reuse(self):
         with mbox_to_git(MBOX_FP) as instance:
@@ -229,6 +232,7 @@ class Testmbox_to_git(unittest.TestCase):
             instance.init_repo(encrypted=True)
             self.assertTrue(os.path.exists(os.path.join(instance.repodir, '.gitsecret')))
             self.assertEqual(instance.commit_count, 1)
+            self.assertTrue(instance.clean)
 
     def test_tell_secret(self):
         with mbox_to_git(MBOX_FP) as instance:
@@ -246,6 +250,7 @@ class Testmbox_to_git(unittest.TestCase):
             self.assertEqual(instance.commit_count, 0)
             instance.init_repo(encrypted=True)
             instance.tell_secret('will@bear.home')
+            self.assertTrue(instance.clean)
 
             subject, files_produced = instance.process_email(instance.messages[0])
             summary = instance.create_summary(files_produced)
@@ -255,6 +260,7 @@ class Testmbox_to_git(unittest.TestCase):
             filename = summary[0].split(':')[0]
             self.assertTrue(os.path.isfile(os.path.join(instance.repodir, filename + '.secret')))
             self.assertFalse(os.path.isfile(os.path.join(instance.repodir, filename)))
+            self.assertTrue(instance.clean)
 
     def test_tree_clean(self):
         with mbox_to_git(MBOX_FP) as instance:

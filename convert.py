@@ -160,19 +160,19 @@ class mbox_to_git(object):
         import os
 
         ignored_files = []
-        added_files = []
+        added_files = ['git add .gitignore;', 'git add .gitsecret/paths/mapping.cfg;']
         encrypted_summary = []
         with open(os.path.join(self.repodir, '.gitignore'), 'a') as gi:
             for s in summary:
                 orig_name = s.split(':')[0]
                 ignored_files.append("git secret add %s;" % orig_name)
-                added_files.append("git add %s.secret" % orig_name)
+                added_files.append("git add %s.secret;" % orig_name)
                 encrypted_summary.append(s.replace(':', '.secret:', 1))
                 gi.write("%s\n" % orig_name)
 
         commands = """
         %s
-        git secret hide -d
+        git secret hide -d;
         %s
         git commit -m "%s" -m "%s";
         """ % ('\n'.join(ignored_files),
