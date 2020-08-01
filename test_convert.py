@@ -230,5 +230,16 @@ class Testmbox_to_git(unittest.TestCase):
             self.assertTrue(os.path.exists(os.path.join(instance.repodir, '.gitsecret')))
             self.assertEqual(instance.commit_count, 1)
 
+    def test_tell_secret(self):
+        with mbox_to_git(MBOX_FP) as instance:
+            self.assertEqual(instance.commit_count, 0)
+            instance.init_repo(encrypted=True)
+            self.assertEqual(instance.commit_count, 1)
+            instance.tell_secret('will@bear.home')
+            self.assertEqual(instance.commit_count, 2)
+            gitsecret_path = os.path.join(instance.repodir, '.gitsecret')
+            self.assertTrue(os.path.isfile(os.path.join(gitsecret_path, 'keys', 'pubring.kbx')))
+            self.assertTrue(os.path.isfile(os.path.join(gitsecret_path, 'keys', 'trustdb.gpg')))
+
 if __name__ == '__main__':
     unittest.main()

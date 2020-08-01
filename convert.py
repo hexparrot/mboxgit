@@ -71,6 +71,20 @@ class mbox_to_git(object):
         from getpass import getuser
         self.set_user(getuser(), "%s@local" % getuser())
 
+    def tell_secret(self, email):
+        import subprocess
+        commands = """
+        git secret tell %s;
+        git add .;
+        git commit -m "adding %s gpg identity"
+        """ % (email, email)
+
+        subprocess.call(commands,
+                        stdout=subprocess.DEVNULL,
+                        stderr=subprocess.DEVNULL,
+                        cwd=self.repodir,
+                        shell=True)
+
     def set_user(self, user, email):
         import subprocess
         commands = """
