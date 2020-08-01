@@ -172,7 +172,7 @@ class mbox_to_git(object):
 
         commands = """
         %s
-        git secret hide
+        git secret hide -d
         %s
         git commit -m "%s" -m "%s";
         """ % ('\n'.join(ignored_files),

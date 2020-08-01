@@ -252,8 +252,9 @@ class Testmbox_to_git(unittest.TestCase):
             commit_count = instance.commit_count
             short_commit = instance.make_secret_commit(subject, summary)
             self.assertEqual(instance.commit_count, commit_count + 1)
-            secret_filename = summary[0].split(':')[0] + '.secret'
-            self.assertTrue(os.path.isfile(os.path.join(instance.repodir, secret_filename)))
+            filename = summary[0].split(':')[0]
+            self.assertTrue(os.path.isfile(os.path.join(instance.repodir, filename + '.secret')))
+            self.assertFalse(os.path.isfile(os.path.join(instance.repodir, filename)))
 
 if __name__ == '__main__':
     unittest.main()
