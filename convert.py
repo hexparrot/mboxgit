@@ -15,6 +15,9 @@ __license__ = "GNU GPL v3.0"
 __version__ = "0.0.1"
 __email__ = "wdchromium@gmail.com"
 
+import os
+import subprocess
+
 class mbox_to_git(object):
     def __init__(self, mbox_path, repodir="mboxrepo"):
         import mailbox
@@ -57,14 +60,12 @@ class mbox_to_git(object):
     def init_repo(self,
                   abort_if_exists=False,
                   encrypted=False):
-        import os
         try:
             os.mkdir(self.repodir)
         except FileExistsError:
             if abort_if_exists:
                 raise RuntimeError("repo path already exists--it shouldn't before init_repo!")
 
-        import subprocess
         subprocess.call("git init",
                         stdout=subprocess.PIPE,
                         cwd=self.repodir,
@@ -85,7 +86,6 @@ class mbox_to_git(object):
         self.set_user(getuser(), "%s@local" % getuser())
 
     def tell_secret(self, email):
-        import subprocess
         commands = """
         git secret tell %s;
         git add .;
@@ -99,7 +99,6 @@ class mbox_to_git(object):
                         shell=True)
 
     def set_user(self, user, email):
-        import subprocess
         commands = """
         git config user.name "%s"
         git config user.email "%s"
@@ -128,8 +127,6 @@ class mbox_to_git(object):
 
             return (t_filedesc, t_filepath, len(message_bytes))
 
-        import os
-
         processed_parts = []
         split_parts = email.get_payload()
         subject = email.get('subject')
@@ -148,20 +145,17 @@ class mbox_to_git(object):
         return (subject, processed_parts)
 
     def create_summary(self, processed_parts):
-        import os
-
         summary = []
         for fp, final_name, fsize in processed_parts:
             summary.append("%s:%s:%i" % (os.path.basename(fp), final_name, fsize))
         return summary
 
     def make_commit(self, subject, summary):
-        import subprocess
-
         commands = """
         git add .;
         git commit -m "%s" -m "%s";
         """ % (subject, '\n'.join(summary))
+
         subprocess.call(commands,
                         stdout=subprocess.PIPE,
                         cwd=self.repodir,
@@ -169,9 +163,6 @@ class mbox_to_git(object):
         return self.head_id
 
     def make_secret_commit(self, subject, summary):
-        import subprocess
-        import os
-
         ignored_files = []
         added_files = ['git add .gitignore;', 'git add .gitsecret/paths/mapping.cfg;']
         encrypted_summary = []
@@ -201,14 +192,13 @@ class mbox_to_git(object):
 
     @property
     def head_id(self):
-        import subprocess
-
         commands = "git rev-parse HEAD"
+
         try:
             output = subprocess.check_output(commands,
-                                  cwd=self.repodir,
-                                  stderr=subprocess.DEVNULL,
-                                  shell=True)
+                                             cwd=self.repodir,
+                                             stderr=subprocess.DEVNULL,
+                                             shell=True)
         except subprocess.CalledProcessError:
             return None
             # Command 'git rev-parse --short HEAD' returned non-zero exit status 128.
@@ -218,9 +208,8 @@ class mbox_to_git(object):
 
     @property
     def commit_count(self):
-        import subprocess
-
         commands = "git rev-list --count HEAD"
+
         try:
             output = subprocess.check_output(commands,
                                              cwd=self.repodir,
@@ -233,27 +222,24 @@ class mbox_to_git(object):
 
     @property
     def clean(self):
-        import subprocess
-
         commands = "git status --porcelain"
+
         output = subprocess.check_output(commands,
                                          cwd=self.repodir,
                                          shell=True)
         return not bool(output.strip())
 
     def get_commit_of_file(self, fn):
-        import subprocess
-
         commands = "git rev-list -1 HEAD %s" % fn
+
         output = subprocess.check_output(commands,
                                          cwd=self.repodir,
                                          shell=True)
         return output.strip().decode('ascii')
 
     def get_commit_filelist(self, commit):
-        import subprocess
-
         commands = "git show --no-commit-id --name-only -r %s" % commit 
+
         output = subprocess.check_output(commands,
                                          cwd=self.repodir,
                                          shell=True)
