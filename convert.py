@@ -17,6 +17,7 @@ __email__ = "wdchromium@gmail.com"
 
 import os
 import subprocess
+import shlex
 
 class mbox_to_git(object):
     def __init__(self, mbox_path, repodir="mboxrepo"):
@@ -66,48 +67,41 @@ class mbox_to_git(object):
             if abort_if_exists:
                 raise RuntimeError("repo path already exists--it shouldn't before init_repo!")
 
-        subprocess.call("git init",
-                        stdout=subprocess.PIPE,
-                        cwd=self.repodir,
-                        shell=True)
+        subprocess.run(shlex.split('git init'),
+                       cwd=self.repodir,
+                       stdout=subprocess.DEVNULL)
 
         if encrypted:
-            commands = """
-            git secret init;
-            git add .;
-            git commit -m "initializing git-secret module";
-            """
-            subprocess.call(commands,
-                            stdout=subprocess.PIPE,
-                            cwd=self.repodir,
-                            shell=True)
+            commands = [ 'git secret init',
+                         'git add .',
+                         'git commit -m "initializing git-secret module"' ]
+
+            for c in commands:
+                subprocess.call(shlex.split(c),
+                                cwd=self.repodir,
+                                stdout=subprocess.DEVNULL)
 
         from getpass import getuser
         self.set_user(getuser(), "%s@local" % getuser())
 
     def tell_secret(self, email):
-        commands = """
-        git secret tell %s;
-        git add .;
-        git commit -m "adding %s gpg identity"
-        """ % (email, email)
+        commands = [ 'git secret tell %s' % email,
+                     'git add .',
+                     'git commit -m "adding %s gpg identity"' % email ]
 
-        subprocess.call(commands,
-                        stdout=subprocess.DEVNULL,
-                        stderr=subprocess.DEVNULL,
-                        cwd=self.repodir,
-                        shell=True)
+        for c in commands:
+            subprocess.run(shlex.split(c),
+                           cwd=self.repodir,
+                           stdout=subprocess.DEVNULL,
+                           stderr=subprocess.DEVNULL)
 
     def set_user(self, user, email):
-        commands = """
-        git config user.name "%s"
-        git config user.email "%s"
-        """ % (user, email)
+        commands = [ 'git config user.name "%s"' % user,
+                     'git config user.email "%s"' % email ]
 
-        subprocess.call(commands,
-                        stdout=subprocess.PIPE,
-                        cwd=self.repodir,
-                        shell=True)
+        for c in commands:
+            subprocess.run(shlex.split(c),
+                           cwd=self.repodir)
 
     def process_email(self, email):
         def fill_file(data, encoding='ascii'):
@@ -151,100 +145,98 @@ class mbox_to_git(object):
         return summary
 
     def make_commit(self, subject, summary):
-        commands = """
-        git add .;
-        git commit -m "%s" -m "%s";
-        """ % (subject, '\n'.join(summary))
+        commands = [ 'git add .',
+                     'git commit -m "%s" -m "%s"' % (subject, '\n'.join(summary)) ]
 
-        subprocess.call(commands,
-                        stdout=subprocess.PIPE,
-                        cwd=self.repodir,
-                        shell=True)
+        for c in commands:
+            subprocess.run(shlex.split(c),
+                           cwd=self.repodir,
+                           stdout=subprocess.DEVNULL)
         return self.head_id
 
     def make_secret_commit(self, subject, summary):
         ignored_files = []
-        added_files = ['git add .gitignore;', 'git add .gitsecret/paths/mapping.cfg;']
+        added_files = ['git add .gitignore', 'git add .gitsecret/paths/mapping.cfg']
         encrypted_summary = []
         with open(os.path.join(self.repodir, '.gitignore'), 'a') as gi:
             for s in summary:
                 orig_name = s.split(':')[0]
-                ignored_files.append("git secret add %s;" % orig_name)
-                added_files.append("git add %s.secret;" % orig_name)
+                ignored_files.append("git secret add %s" % orig_name)
+                added_files.append("git add %s.secret" % orig_name)
                 encrypted_summary.append(s.replace(':', '.secret:', 1))
                 gi.write("%s\n" % orig_name)
 
-        commands = """
-        %s
-        git secret hide -d;
-        %s
-        git commit -m "%s" -m "%s";
-        """ % ('\n'.join(ignored_files),
-               '\n'.join(added_files),
-               subject,
-               '\n'.join(encrypted_summary))
+        for ifile in ignored_files:
+            subprocess.run(shlex.split(ifile),
+                           cwd=self.repodir,
+                           stdout=subprocess.DEVNULL)
 
-        subprocess.call(commands,
-                        stdout=subprocess.PIPE,
-                        cwd=self.repodir,
-                        shell=True)
+        subprocess.run(shlex.split('git secret hide -d'),
+                       cwd=self.repodir,
+                       stdout=subprocess.DEVNULL)
+
+        for afile in added_files:
+            subprocess.run(shlex.split(afile),
+                           cwd=self.repodir,
+                           stdout=subprocess.DEVNULL)
+
+        command = 'git commit -m "%s" -m "%s"' % (subject,
+                                                  '\n'.join(encrypted_summary))
+        subprocess.run(shlex.split(command),
+                       cwd=self.repodir,
+                       stdout=subprocess.DEVNULL)
+
         return self.head_id
 
     @property
     def head_id(self):
-        commands = "git rev-parse HEAD"
-
-        try:
-            output = subprocess.check_output(commands,
-                                             cwd=self.repodir,
-                                             stderr=subprocess.DEVNULL,
-                                             shell=True)
-        except subprocess.CalledProcessError:
+        cmp_proc = subprocess.run(shlex.split('git rev-parse HEAD'),
+                                  cwd=self.repodir,
+                                  stdout=subprocess.PIPE,
+                                  stderr=subprocess.DEVNULL,
+                                  text=True)
+        if cmp_proc.returncode == 128:
             return None
-            # Command 'git rev-parse --short HEAD' returned non-zero exit status 128.
-            # thrown when no repository yet init'ed
         else:
-            return output.strip().decode('ascii')
+            return cmp_proc.stdout.strip()
 
     @property
     def commit_count(self):
-        commands = "git rev-list --count HEAD"
-
         try:
-            output = subprocess.check_output(commands,
-                                             cwd=self.repodir,
-                                             stderr=subprocess.DEVNULL,
-                                             shell=True)
+            cmp_proc = subprocess.run(shlex.split('git rev-list --count HEAD'),
+                                      cwd=self.repodir,
+                                      stdout=subprocess.PIPE,
+                                      stderr=subprocess.DEVNULL,
+                                      text=True)
         except (subprocess.CalledProcessError, FileNotFoundError):
             return 0
         else:
-            return int(output.strip().decode('ascii'))
+            return int(cmp_proc.stdout.strip()) if cmp_proc.stdout else 0
 
     @property
     def clean(self):
-        commands = "git status --porcelain"
-
-        output = subprocess.check_output(commands,
-                                         cwd=self.repodir,
-                                         shell=True)
-        return not bool(output.strip())
+        cmp_proc = subprocess.run(shlex.split('git status --porcelain'),
+                                  cwd=self.repodir,
+                                  capture_output=True,
+                                  text=True)
+        return not bool(cmp_proc.stdout)
 
     def get_commit_of_file(self, fn):
-        commands = "git rev-list -1 HEAD %s" % fn
-
-        output = subprocess.check_output(commands,
-                                         cwd=self.repodir,
-                                         shell=True)
-        return output.strip().decode('ascii')
+        cmp_proc = subprocess.run(shlex.split('git rev-list -1 HEAD %s' % fn),
+                                  cwd=self.repodir,
+                                  stdout=subprocess.PIPE,
+                                  text=True)
+        return cmp_proc.stdout.strip()
 
     def get_commit_filelist(self, commit):
-        commands = "git show --no-commit-id --name-only -r %s" % commit 
-
-        output = subprocess.check_output(commands,
-                                         cwd=self.repodir,
-                                         shell=True)
+        command = 'git show --no-commit-id --name-only -r %s' % commit
+        cmp_proc = subprocess.run(shlex.split(command),
+                                  cwd=self.repodir,
+                                  stdout=subprocess.PIPE,
+                                  stderr=subprocess.DEVNULL,
+                                  text=True)
+        line_output = cmp_proc.stdout.split('\n')
         
-        line_output = output.strip().decode('ascii').split('\n')
         retval = []
         for line in line_output:
             split = line.split(' ')
