@@ -8,6 +8,7 @@ from convert import mbox_to_git
 
 MBOX_FP = 'pi'
 REPO_FP = 'mboxrepo'
+GPG_EMAIL = 'wdchromium@gmail.com'
 
 class Testmbox_to_git(unittest.TestCase):
     def setUp(self):
@@ -137,10 +138,11 @@ class Testmbox_to_git(unittest.TestCase):
         config = configparser.ConfigParser()
 
         with mbox_to_git(MBOX_FP) as instance:
+            from getpass import getuser
             instance.init_repo()
             config.read(os.path.join(REPO_FP, '.git', 'config'))
-            self.assertEqual(config['user']['name'], MBOX_FP)
-            self.assertEqual(config['user']['email'], "%s@local" % MBOX_FP)
+            self.assertEqual(config['user']['name'], getuser())
+            self.assertEqual(config['user']['email'], "%s@local" % getuser())
 
             instance.set_user('will', 'will@bear.home')
             config.read(os.path.join(REPO_FP, '.git', 'config'))
@@ -239,7 +241,7 @@ class Testmbox_to_git(unittest.TestCase):
             self.assertEqual(instance.commit_count, 0)
             instance.init_repo(encrypted=True)
             self.assertEqual(instance.commit_count, 1)
-            instance.tell_secret('will@bear.home')
+            instance.tell_secret(GPG_EMAIL)
             self.assertEqual(instance.commit_count, 2)
             gitsecret_path = os.path.join(instance.repodir, '.gitsecret')
             self.assertTrue(os.path.isfile(os.path.join(gitsecret_path, 'keys', 'pubring.kbx')))
@@ -249,7 +251,7 @@ class Testmbox_to_git(unittest.TestCase):
         with mbox_to_git(MBOX_FP) as instance:
             self.assertEqual(instance.commit_count, 0)
             instance.init_repo(encrypted=True)
-            instance.tell_secret('will@bear.home')
+            instance.tell_secret(GPG_EMAIL)
             self.assertTrue(instance.clean)
 
             subject, files_produced = instance.process_email(instance.messages[0])
