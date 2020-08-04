@@ -6,7 +6,7 @@ import shutil
 import os
 from convert import mbox_to_git
 
-MBOX_FP = 'pi'
+MBOX_FP = 'mbox.sample'
 REPO_FP = 'mboxrepo'
 GPG_EMAIL = 'wdchromium@gmail.com'
 
@@ -41,9 +41,9 @@ class Testmbox_to_git(unittest.TestCase):
 
     # commented out because this arrangement doesn't close the mbox after raising
     #def test_ensure_mailbox_locks(self):
-    #    with mbox_to_git('pi') as instance:
+    #    with mbox_to_git(MBOX_FP) as instance:
     #        with self.assertRaises(mailbox.ExternalClashError):
-    #            with mbox_to_git('pi') as instance2:
+    #            with mbox_to_git(MBOX_FP) as instance2:
     #                pass
 
     def test_identifies_correct_message_count(self):
