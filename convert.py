@@ -244,6 +244,31 @@ class mbox_to_git(object):
             retval.append(line)
         return retval
 
+    def create_tarball(self):
+        command = "git show --no-commit-id --name-only -r %s" % self.head_id
+        show_process = subprocess.run(shlex.split(command),
+                                      cwd=self.repodir,
+                                      stdout=subprocess.PIPE,
+                                      text=True)
+
+        files = []
+        for line in show_process.stdout.split('\n'):
+            if line.startswith('commit '):
+                break
+            else:
+                files.append(line)
+
+        script_path=os.path.dirname(os.path.realpath(__file__))
+        tarball_fp=os.path.join(script_path, 'commit.tar')
+
+        import tarfile
+        tar = tarfile.open(tarball_fp, 'w')
+        for f in files:
+            added_filepath = os.path.join(self.repodir, f)
+            tar.add(added_filepath, arcname=f)
+        tar.close()
+        return tarball_fp
+
 if __name__ == '__main__':
     with mbox_to_git('mbox.sample') as instance:
         instance.init_repo()

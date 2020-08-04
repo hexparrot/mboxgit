@@ -305,5 +305,30 @@ class Testmbox_to_git(unittest.TestCase):
             self.assertTrue(len(commit) == 40)
             self.assertIsInstance(commit, str)
 
+    def test_create_tarball(self):
+        with mbox_to_git(MBOX_FP) as instance:
+            instance.init_repo()
+
+            for e in instance.messages:
+                subject, files_produced = instance.process_email(e)
+                summary = instance.create_summary(files_produced)
+                commit = instance.make_commit(subject, summary)
+
+                file_list = instance.get_commit_filelist(commit)
+
+                file_created = instance.create_tarball()
+                self.assertTrue(os.path.isfile(file_created))
+
+                import tarfile
+                import tempfile
+
+                tmpdir = tempfile.gettempdir()
+                self.assertTrue(tarfile.is_tarfile(file_created))
+                with tarfile.TarFile(file_created, 'r') as tf:
+                    self.assertEqual(set(tf.getnames()), set(file_list))
+                    for m in tf.getmembers():
+                        repo_filepath = os.path.join(instance.repodir, m.name)
+                        self.assertEqual(m.size, os.stat(repo_filepath).st_size)
+
 if __name__ == '__main__':
     unittest.main()
