@@ -258,14 +258,22 @@ class mbox_to_git(object):
             else:
                 files.append(line)
 
+        renames = {}
+        for line in show_process.stdout.split('\n'):
+            if line.count(':') == 2:
+                rnd, orig, size = line.split(':')
+                rnd = rnd.strip()
+                if rnd in files:
+                    renames[rnd] = orig
+
         script_path=os.path.dirname(os.path.realpath(__file__))
         tarball_fp=os.path.join(script_path, 'commit.tar')
 
         import tarfile
         tar = tarfile.open(tarball_fp, 'w')
-        for f in files:
-            added_filepath = os.path.join(self.repodir, f)
-            tar.add(added_filepath, arcname=f)
+        for random_name, original_name in renames.items():
+            added_filepath = os.path.join(self.repodir, random_name)
+            tar.add(added_filepath, arcname=original_name)
         tar.close()
         return tarball_fp
 

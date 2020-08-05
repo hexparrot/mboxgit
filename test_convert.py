@@ -314,21 +314,24 @@ class Testmbox_to_git(unittest.TestCase):
                 summary = instance.create_summary(files_produced)
                 commit = instance.make_commit(subject, summary)
 
-                file_list = instance.get_commit_filelist(commit)
+                src_filenames = [s[1] for s in files_produced]
+                renames = {}
+                for s in summary:
+                    rnd, orig, _ = s.strip().split(':')
+                    renames[orig] = rnd
 
                 file_created = instance.create_tarball()
                 self.assertTrue(os.path.isfile(file_created))
 
                 import tarfile
-                import tempfile
 
-                tmpdir = tempfile.gettempdir()
                 self.assertTrue(tarfile.is_tarfile(file_created))
                 with tarfile.TarFile(file_created, 'r') as tf:
-                    self.assertEqual(set(tf.getnames()), set(file_list))
+                    self.assertEqual(set(tf.getnames()), set(src_filenames))
                     for m in tf.getmembers():
-                        repo_filepath = os.path.join(instance.repodir, m.name)
-                        self.assertEqual(m.size, os.stat(repo_filepath).st_size)
+                        file_on_disk = os.path.join(instance.repodir, renames[m.name])
+                        self.assertEqual(m.size, os.stat(file_on_disk).st_size)
+
 
 if __name__ == '__main__':
     unittest.main()
