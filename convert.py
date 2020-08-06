@@ -155,35 +155,52 @@ class mbox_to_git(object):
         return self.head_id
 
     def make_secret_commit(self, subject, summary):
-        ignored_files = []
-        added_files = ['git add .gitignore', 'git add .gitsecret/paths/mapping.cfg']
-        encrypted_summary = []
+        """ Creates a new commit in the git tree including
+            all attachments, the body text uploaded as 'body',
+            and the git log header matching the email subject.
+
+            The files will have .secret affixed to them,
+            becoming their new file identity, signifying that
+            a private key would be required to decrypt the key
+            even after attaining the file.
+        """
+        git_secret_add_cmds = []
+        git_add_cmds = ['git add .gitignore', 'git add .gitsecret/paths/mapping.cfg']
+        revised_summary = []
+
         with open(os.path.join(self.repodir, '.gitignore'), 'a') as gi:
             for s in summary:
-                orig_name = s.split(':')[0]
-                ignored_files.append("git secret add %s" % orig_name)
-                added_files.append("git add %s.secret" % orig_name)
-                encrypted_summary.append(s.replace(':', '.secret:', 1))
-                gi.write("%s\n" % orig_name)
+                rnd_name = s.split(':')[0]
+                # git secret add does two things:
+                # 1) encrypts FILE and produces FILE.secret
+                git_secret_add_cmds.append("git secret add %s" % rnd_name)
+                # 2) requires FILE to be added to .gitignore
+                gi.write("%s\n" % rnd_name)
 
-        for ifile in ignored_files:
-            subprocess.run(shlex.split(ifile),
+                # git add the encrypted file with added suffix
+                git_add_cmds.append("git add %s.secret" % rnd_name)
+                # ensure the git commit longform contains the fn update
+                revised_summary.append(s.replace(':', '.secret:', 1))
+
+        for cmd in git_secret_add_cmds:
+            subprocess.run(shlex.split(cmd),
                            cwd=self.repodir,
                            stdout=subprocess.DEVNULL)
 
+        # -F required to do encryption of only newly added files, instead of all
         subprocess.run(shlex.split('git secret hide -F -d'),
                        cwd=self.repodir,
                        stdout=subprocess.DEVNULL,
                        stderr=subprocess.DEVNULL)
 
-        for afile in added_files:
-            subprocess.run(shlex.split(afile),
+        for cmd in git_add_cmds:
+            subprocess.run(shlex.split(cmd),
                            cwd=self.repodir,
                            stdout=subprocess.DEVNULL)
 
-        command = 'git commit -m "%s" -m "%s"' % (subject,
-                                                  '\n'.join(encrypted_summary))
-        subprocess.run(shlex.split(command),
+        cmd = 'git commit -m "%s" -m "%s"' % (subject,
+                                             '\n'.join(revised_summary))
+        subprocess.run(shlex.split(cmd),
                        cwd=self.repodir,
                        stdout=subprocess.DEVNULL)
 
