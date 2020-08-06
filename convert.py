@@ -35,11 +35,17 @@ class mbox_to_git(object):
         except AttributeError:
             raise RuntimeError("provided path is not an mbox file")
         else:
+            # put a lock on the mailbox preventing external edits
+            # until this object is closed / full script execution
             self.mailbox.lock()
+            # emails from mbox_path are IMMEDIATELY read and copied
+            # to this object; this makes it potentially one of the
+            # longest calls and least protected from untesetd email
+            # TODO: find email structure that mailbox obj raises for
             self.messages = [msg for msg in self.mailbox]
 
     def __enter__(self):
-        return self
+        return self # boilerplate for allowing with/as context mgr
 
     def __exit__(self, type, value, traceback):
         self.mailbox.unlock()
@@ -67,10 +73,13 @@ class mbox_to_git(object):
             if abort_if_exists:
                 raise RuntimeError("repo path already exists--it shouldn't before init_repo!")
 
+        # TODO: determine way these commands do not need to run,
+        #       e.g., production use when repo always will exist on instantiation.
         subprocess.run(shlex.split('git init'),
                        cwd=self.repodir,
                        stdout=subprocess.DEVNULL)
 
+        # TODO: this could cause noise on repeats (although otherwise not truly impactful)
         if encrypted:
             commands = [ 'git secret init',
                          'git add .',
@@ -81,10 +90,16 @@ class mbox_to_git(object):
                                 cwd=self.repodir,
                                 stdout=subprocess.DEVNULL)
 
+        # TODO: this will also need to eventually accept user input
         from getpass import getuser
         self.set_user(getuser(), "%s@local" % getuser())
 
     def tell_secret(self, email):
+        """ Accepts an email address signifying the GPG --list-keys entry
+            intending to be a user of this git repo. In server deployments,
+            this means possession of pubkey imported into GPG.
+        """
+        # TODO: accept filepath to a key or potentially generate
         commands = [ 'git secret tell %s' % email,
                      'git add .',
                      'git commit -m "adding %s gpg identity"' % email ]
@@ -96,6 +111,11 @@ class mbox_to_git(object):
                            stderr=subprocess.DEVNULL)
 
     def set_user(self, user, email):
+        """ Accepts user and email from user and sets in git as author.
+            No functionality will work if this doesn't satisfy git.
+        """
+        # TODO: Protected from injection via shlex, but otherwise could
+        #       greatly benefit from sanitization and bad input detection
         commands = [ 'git config user.name "%s"' % user,
                      'git config user.email "%s"' % email ]
 
