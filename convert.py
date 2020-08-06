@@ -153,13 +153,6 @@ class mbox_to_git(object):
 
         return (subject, processed_parts)
 
-    #def create_summary(self, processed_parts):
-    #    """ Returns list of [name saved on disk:name when retrieved:size of part] """
-    #    summary = []
-    #    for fp, final_name, fsize in processed_parts:
-    #        summary.append("%s:%s:%i" % (os.path.basename(fp), final_name, fsize))
-    #    return summary
-
     def make_commit(self, subject, processed_parts):
         """ Receives subject name and processed message parts and commits it to git log """
         summary = []
