@@ -51,19 +51,6 @@ class mbox_to_git(object):
         self.mailbox.unlock()
         self.mailbox.close()
 
-    def check_clean_before(self, func):
-        def wrapper(*args, **kwargs):
-            if not self.clean: raise RuntimeError('working tree not clean prior to action; aborting')
-            return func(*args, **kwargs)
-        return wrapper
-
-    def check_clean_after(self, func):
-        def wrapper(*args, **kwargs):
-            retval = func(*args, **kwargs)
-            if not self.clean: raise RuntimeError('working tree not clean after action; aborting')
-            return retval
-        return wrapper
-
     def init_repo(self,
                   abort_if_exists=False,
                   encrypted=False):
