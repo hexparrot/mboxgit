@@ -171,9 +171,10 @@ class mbox_to_git(object):
                            cwd=self.repodir,
                            stdout=subprocess.DEVNULL)
 
-        subprocess.run(shlex.split('git secret hide -d'),
+        subprocess.run(shlex.split('git secret hide -F -d'),
                        cwd=self.repodir,
-                       stdout=subprocess.DEVNULL)
+                       stdout=subprocess.DEVNULL,
+                       stderr=subprocess.DEVNULL)
 
         for afile in added_files:
             subprocess.run(shlex.split(afile),

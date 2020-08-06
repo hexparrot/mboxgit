@@ -332,6 +332,35 @@ class Testmbox_to_git(unittest.TestCase):
                         file_on_disk = os.path.join(instance.repodir, renames[m.name])
                         self.assertEqual(m.size, os.stat(file_on_disk).st_size)
 
+    def test_create_tarball_encrypted(self):
+        with mbox_to_git(MBOX_FP) as instance:
+            instance.init_repo(encrypted=True)
+            instance.tell_secret(GPG_EMAIL)
+
+            for e in instance.messages:
+                subject, files_produced = instance.process_email(e)
+                summary = instance.create_summary(files_produced)
+                commit = instance.make_secret_commit(subject, summary)
+
+                src_filenames = [s[1] for s in files_produced]
+                renames = {}
+                for s in summary:
+                    rnd, orig, _ = s.strip().split(':')
+                    renames[orig] = rnd + '.secret'
+
+                file_created = instance.create_tarball()
+                self.assertTrue(os.path.isfile(file_created))
+
+                import tarfile
+
+                self.assertTrue(tarfile.is_tarfile(file_created))
+                with tarfile.TarFile(file_created, 'r') as tf:
+                    self.assertEqual(set(tf.getnames()), set(src_filenames))
+                    for m in tf.getmembers():
+                        file_on_disk = os.path.join(instance.repodir, renames[m.name])
+                        self.assertEqual(m.size, os.stat(file_on_disk).st_size)
+                os.unlink(file_created)
+
 
 if __name__ == '__main__':
     unittest.main()
