@@ -89,6 +89,7 @@ class Testmbox_to_git(unittest.TestCase):
             fn_on_disk, fn_in_summary, fsize = files_produced[0]
             self.assertTrue(os.path.isfile(fn_on_disk))
             self.assertEqual(fn_in_summary, 'body')
+            os.unlink(fn_on_disk)
 
             subject, files_produced = instance.process_email(instance.messages[1])
             self.assertEqual(len(files_produced), 2) #body and attachment
@@ -109,6 +110,7 @@ class Testmbox_to_git(unittest.TestCase):
             fn_on_disk, fn_in_summary, fsize = files_produced[0]
             self.assertEqual(os.path.getsize(fn_on_disk), 34)
             self.assertEqual(os.path.getsize(fn_on_disk), fsize)
+            os.unlink(fn_on_disk)
 
             subject, files_produced = instance.process_email(instance.messages[1])
 
@@ -303,6 +305,33 @@ class Testmbox_to_git(unittest.TestCase):
                         file_on_disk = os.path.join(instance.repodir, renames[m.name])
                         self.assertEqual(m.size, os.stat(file_on_disk).st_size)
                 os.unlink(file_created)
+
+    def test_decorator_check_clean_before(self):
+        with mbox_to_git(MBOX_FP) as instance:
+            instance.init_repo()
+
+            try:
+                subject, files_produced = instance.process_email(instance.messages[0])
+            except ExceptionType:
+                self.fail("this should not have thrown anything")
+
+            with self.assertRaises(RuntimeError):
+                subject, files_produced = instance.process_email(instance.messages[0])
+
+    def test_decorator_check_clean_after(self):
+        with mbox_to_git(MBOX_FP) as instance:
+            instance.init_repo()
+
+            subject, files_produced = instance.process_email(instance.messages[0])
+
+            with self.assertRaises(RuntimeError):
+                subject, files_produced = instance.process_email(instance.messages[0])
+
+            try:
+                commit = instance.make_commit(subject, files_produced)
+            except ExceptionType:
+                self.fail("this should not have thrown anything")
+
 
 
 if __name__ == '__main__':
