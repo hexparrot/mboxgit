@@ -19,6 +19,18 @@ import os
 import subprocess
 import shlex
 
+def check_clean_before(func):
+    def decorated(self, *args, **kwargs):
+        if not self.clean: raise RuntimeError('working tree not clean before operation; cannot continue')
+        return func(self, *args, **kwargs)
+    return decorated
+
+def check_clean_after(func):
+    def decorated(self, *args, **kwargs):
+        return func(self, *args, **kwargs)
+        if not self.clean: raise RuntimeError('working tree not clean after operation; cannot continue')
+    return decorated
+
 class mbox_to_git(object):
     def __init__(self, mbox_path, repodir="mboxrepo"):
         import mailbox
@@ -51,6 +63,7 @@ class mbox_to_git(object):
         self.mailbox.unlock()
         self.mailbox.close()
 
+    @check_clean_after
     def init_repo(self,
                   abort_if_exists=False,
                   encrypted=False):
@@ -81,6 +94,8 @@ class mbox_to_git(object):
         from getpass import getuser
         self.set_user(getuser(), "%s@local" % getuser())
 
+    @check_clean_before
+    @check_clean_after
     def tell_secret(self, email):
         """ Accepts an email address signifying the GPG --list-keys entry
             intending to be a user of this git repo. In server deployments,
@@ -153,6 +168,7 @@ class mbox_to_git(object):
 
         return (subject, processed_parts)
 
+    @check_clean_after
     def make_commit(self, subject, processed_parts):
         """ Receives subject name and processed message parts and commits it to git log """
         summary = []
@@ -168,6 +184,7 @@ class mbox_to_git(object):
                            stdout=subprocess.DEVNULL)
         return self.head_id
 
+    @check_clean_after
     def make_secret_commit(self, subject, processed_parts):
         """ Creates a new commit in the git tree including
             all attachments, the body text uploaded as 'body',
