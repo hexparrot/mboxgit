@@ -166,15 +166,19 @@ class mbox_to_git(object):
 
         return (subject, processed_parts)
 
-    def create_summary(self, processed_parts):
-        """ Returns list of [name saved on disk:name when retrieved:size of part] """
+    #def create_summary(self, processed_parts):
+    #    """ Returns list of [name saved on disk:name when retrieved:size of part] """
+    #    summary = []
+    #    for fp, final_name, fsize in processed_parts:
+    #        summary.append("%s:%s:%i" % (os.path.basename(fp), final_name, fsize))
+    #    return summary
+
+    def make_commit(self, subject, processed_parts):
+        """ Receives subject name and processed message parts and commits it to git log """
         summary = []
         for fp, final_name, fsize in processed_parts:
             summary.append("%s:%s:%i" % (os.path.basename(fp), final_name, fsize))
-        return summary
 
-    def make_commit(self, subject, summary):
-        """ Receives subject name and file summary and commits it to git log """
         commands = [ 'git add .',
                      'git commit -m "%s" -m "%s"' % (subject, '\n'.join(summary)) ]
 
@@ -184,7 +188,7 @@ class mbox_to_git(object):
                            stdout=subprocess.DEVNULL)
         return self.head_id
 
-    def make_secret_commit(self, subject, summary):
+    def make_secret_commit(self, subject, processed_parts):
         """ Creates a new commit in the git tree including
             all attachments, the body text uploaded as 'body',
             and the git log header matching the email subject.
@@ -197,6 +201,10 @@ class mbox_to_git(object):
         git_secret_add_cmds = []
         git_add_cmds = ['git add .gitignore', 'git add .gitsecret/paths/mapping.cfg']
         revised_summary = []
+
+        summary = []
+        for fp, final_name, fsize in processed_parts:
+            summary.append("%s:%s:%i" % (os.path.basename(fp), final_name, fsize))
 
         with open(os.path.join(self.repodir, '.gitignore'), 'a') as gi:
             for s in summary:

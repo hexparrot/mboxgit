@@ -149,28 +149,13 @@ class Testmbox_to_git(unittest.TestCase):
             self.assertEqual(config['user']['name'], 'will')
             self.assertEqual(config['user']['email'], 'will@bear.home')
 
-    def test_create_summary(self):
-        with mbox_to_git(MBOX_FP) as instance:
-            instance.init_repo()
-
-            subject, files_produced = instance.process_email(instance.messages[0])
-            summary = instance.create_summary(files_produced)
-
-            self.assertEqual(len(summary), len(files_produced))
-            self.assertEqual(len(summary), 1)
-            split_up = summary[0].split(':')
-            self.assertTrue(4 <= len(split_up[0]) <= 8) # length variable (def min: 4)
-            self.assertEqual(split_up[1], 'body')
-            self.assertEqual(split_up[2], '34')
-
     def test_make_commit(self):
         with mbox_to_git(MBOX_FP) as instance:
             instance.init_repo()
             self.assertTrue(instance.clean)
             subject, files_produced = instance.process_email(instance.messages[0])
-            summary = instance.create_summary(files_produced)
             self.assertEqual(instance.commit_count, 0)
-            short_commit = instance.make_commit(subject, summary)
+            short_commit = instance.make_commit(subject, files_produced)
             self.assertTrue(len(short_commit) == 40)
             self.assertIsInstance(short_commit, str)
             self.assertEqual(instance.commit_count, 1)
@@ -187,9 +172,8 @@ class Testmbox_to_git(unittest.TestCase):
         with mbox_to_git(MBOX_FP) as instance:
             instance.init_repo()
             subject, files_produced = instance.process_email(instance.messages[0])
-            summary = instance.create_summary(files_produced)
             self.assertIsNone(instance.head_id)
-            instance.make_commit(subject, summary)
+            instance.make_commit(subject, files_produced)
             head_commit = instance.head_id
             self.assertTrue(len(head_commit) == 40)
             self.assertIsInstance(head_commit, str)
@@ -199,12 +183,12 @@ class Testmbox_to_git(unittest.TestCase):
             instance.init_repo()
 
             subject, files_produced = instance.process_email(instance.messages[1])
-            summary = instance.create_summary(files_produced)
-            created_commit = instance.make_commit(subject, summary)
+            created_commit = instance.make_commit(subject, files_produced)
             
-            self.assertTrue('rsakey.pub' in summary[1])
-            mapped_filename = summary[1].split(':')[0]
-            matching_commit = instance.get_commit_of_file(mapped_filename)
+            rnd_name, orig_name, _ = files_produced[1]
+            rnd_name = os.path.basename(rnd_name) # take off directory components
+            self.assertEqual(orig_name, 'rsakey.pub')
+            matching_commit = instance.get_commit_of_file(rnd_name)
             self.assertTrue(len(matching_commit) == 40)
             self.assertIsInstance(matching_commit, str)
             self.assertEqual(matching_commit, created_commit)
@@ -214,18 +198,13 @@ class Testmbox_to_git(unittest.TestCase):
             instance.init_repo()
 
             subject, files_produced = instance.process_email(instance.messages[1])
-            summary = instance.create_summary(files_produced)
-            commit = instance.make_commit(subject, summary)
+            commit = instance.make_commit(subject, files_produced)
             
-            found = None
-            for s in summary:
-                if s.split(':')[1] == 'rsakey.pub':
-                    found = s
-
-            mapped_filename, dest_filename, _ = s.split(':')
-            matching_commit = instance.get_commit_of_file(mapped_filename)
+            rnd_name, orig_name, _ = files_produced[0]
+            rnd_name = os.path.basename(rnd_name) # take off directory components
+            matching_commit = instance.get_commit_of_file(rnd_name)
             file_list = instance.get_commit_filelist(matching_commit)
-            self.assertTrue(mapped_filename in file_list)
+            self.assertTrue(rnd_name in file_list)
             self.assertEqual(len(file_list), 2)
 
     def test_init_secret(self):
@@ -255,11 +234,10 @@ class Testmbox_to_git(unittest.TestCase):
             self.assertTrue(instance.clean)
 
             subject, files_produced = instance.process_email(instance.messages[0])
-            summary = instance.create_summary(files_produced)
             commit_count = instance.commit_count
-            short_commit = instance.make_secret_commit(subject, summary)
+            short_commit = instance.make_secret_commit(subject, files_produced)
             self.assertEqual(instance.commit_count, commit_count + 1)
-            filename = summary[0].split(':')[0]
+            filename = os.path.basename(files_produced[0][0]) # take off directory components
             self.assertTrue(os.path.isfile(os.path.join(instance.repodir, filename + '.secret')))
             self.assertFalse(os.path.isfile(os.path.join(instance.repodir, filename)))
             self.assertTrue(instance.clean)
@@ -271,39 +249,8 @@ class Testmbox_to_git(unittest.TestCase):
             self.assertTrue(instance.clean)
             subject, files_produced = instance.process_email(instance.messages[0])
             self.assertFalse(instance.clean)
-            summary = instance.create_summary(files_produced)
-            commit = instance.make_commit(subject, summary)
+            commit = instance.make_commit(subject, files_produced)
             self.assertTrue(instance.clean)
-
-    def test_decorator_check_clean_before(self):
-        with mbox_to_git(MBOX_FP) as instance:
-            instance.init_repo()
-
-            wrapped_one = instance.check_clean_before(instance.process_email)
-            wrapped_two = instance.check_clean_before(instance.create_summary)
-
-            subject, files_produced = wrapped_one(instance.messages[0])
-            self.assertIsInstance(subject, str)
-            self.assertIsInstance(files_produced, list)
-            with self.assertRaises(RuntimeError):
-                summary = wrapped_two(files_produced)
-
-    def test_decorator_check_clean_after(self):
-        with mbox_to_git(MBOX_FP) as instance:
-            instance.init_repo()
-
-            wrapped_one = instance.check_clean_after(instance.process_email)
-            wrapped_two = instance.check_clean_after(instance.make_commit)
-
-            with self.assertRaises(RuntimeError):
-                subject, files_produced = wrapped_one(instance.messages[0])
-
-            subject, files_produced = instance.process_email(instance.messages[0])
-            summary = instance.create_summary(files_produced)
-
-            commit = wrapped_two(subject, summary)
-            self.assertTrue(len(commit) == 40)
-            self.assertIsInstance(commit, str)
 
     def test_create_tarball(self):
         with mbox_to_git(MBOX_FP) as instance:
@@ -311,14 +258,12 @@ class Testmbox_to_git(unittest.TestCase):
 
             for e in instance.messages:
                 subject, files_produced = instance.process_email(e)
-                summary = instance.create_summary(files_produced)
-                commit = instance.make_commit(subject, summary)
+                commit = instance.make_commit(subject, files_produced)
 
                 src_filenames = [s[1] for s in files_produced]
                 renames = {}
-                for s in summary:
-                    rnd, orig, _ = s.strip().split(':')
-                    renames[orig] = rnd
+                for rnd, orig, _ in files_produced:
+                    renames[orig] = os.path.basename(rnd)
 
                 file_created = instance.create_tarball()
                 self.assertTrue(os.path.isfile(file_created))
@@ -339,14 +284,12 @@ class Testmbox_to_git(unittest.TestCase):
 
             for e in instance.messages:
                 subject, files_produced = instance.process_email(e)
-                summary = instance.create_summary(files_produced)
-                commit = instance.make_secret_commit(subject, summary)
+                commit = instance.make_secret_commit(subject, files_produced)
 
                 src_filenames = [s[1] for s in files_produced]
                 renames = {}
-                for s in summary:
-                    rnd, orig, _ = s.strip().split(':')
-                    renames[orig] = rnd + '.secret'
+                for rnd, orig, _ in files_produced:
+                    renames[orig] = os.path.basename(rnd) + '.secret'
 
                 file_created = instance.create_tarball()
                 self.assertTrue(os.path.isfile(file_created))
