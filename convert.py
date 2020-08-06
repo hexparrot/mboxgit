@@ -35,11 +35,17 @@ class mbox_to_git(object):
         except AttributeError:
             raise RuntimeError("provided path is not an mbox file")
         else:
+            # put a lock on the mailbox preventing external edits
+            # until this object is closed / full script execution
             self.mailbox.lock()
+            # emails from mbox_path are IMMEDIATELY read and copied
+            # to this object; this makes it potentially one of the
+            # longest calls and least protected from untesetd email
+            # TODO: find email structure that mailbox obj raises for
             self.messages = [msg for msg in self.mailbox]
 
     def __enter__(self):
-        return self
+        return self # boilerplate for allowing with/as context mgr
 
     def __exit__(self, type, value, traceback):
         self.mailbox.unlock()
@@ -67,10 +73,13 @@ class mbox_to_git(object):
             if abort_if_exists:
                 raise RuntimeError("repo path already exists--it shouldn't before init_repo!")
 
+        # TODO: determine way these commands do not need to run,
+        #       e.g., production use when repo always will exist on instantiation.
         subprocess.run(shlex.split('git init'),
                        cwd=self.repodir,
                        stdout=subprocess.DEVNULL)
 
+        # TODO: this could cause noise on repeats (although otherwise not truly impactful)
         if encrypted:
             commands = [ 'git secret init',
                          'git add .',
@@ -81,10 +90,16 @@ class mbox_to_git(object):
                                 cwd=self.repodir,
                                 stdout=subprocess.DEVNULL)
 
+        # TODO: this will also need to eventually accept user input
         from getpass import getuser
         self.set_user(getuser(), "%s@local" % getuser())
 
     def tell_secret(self, email):
+        """ Accepts an email address signifying the GPG --list-keys entry
+            intending to be a user of this git repo. In server deployments,
+            this means possession of pubkey imported into GPG.
+        """
+        # TODO: accept filepath to a key or potentially generate
         commands = [ 'git secret tell %s' % email,
                      'git add .',
                      'git commit -m "adding %s gpg identity"' % email ]
@@ -96,6 +111,11 @@ class mbox_to_git(object):
                            stderr=subprocess.DEVNULL)
 
     def set_user(self, user, email):
+        """ Accepts user and email from user and sets in git as author.
+            No functionality will work if this doesn't satisfy git.
+        """
+        # TODO: Protected from injection via shlex, but otherwise could
+        #       greatly benefit from sanitization and bad input detection
         commands = [ 'git config user.name "%s"' % user,
                      'git config user.email "%s"' % email ]
 
@@ -104,7 +124,14 @@ class mbox_to_git(object):
                            cwd=self.repodir)
 
     def process_email(self, email):
+        """ Processes individual emails in mbox-style box r/o.
+            Identifies multipart emails and splits body and attachments
+            all into separate files implemented with mkstemp.
+        """
         def fill_file(data, encoding='ascii'):
+            """ Receives data BASE64/ASCII and writes it to "temporary" file.
+                Returns filedescriptor, path, and size of resultant file.
+            """
             ascii_as_bytes = data.encode('ascii')
             if encoding == 'base64':
                 import base64
@@ -113,6 +140,7 @@ class mbox_to_git(object):
                 message_bytes = ascii_as_bytes
 
             import tempfile
+            # create file directly in repopath, does not unlink
             t_filedesc, t_filepath = tempfile.mkstemp(prefix='', dir=self.repodir)
             open_file = open(t_filepath, 'w+b')
             open_file.write(message_bytes)
@@ -125,9 +153,9 @@ class mbox_to_git(object):
         split_parts = email.get_payload()
         subject = email.get('subject')
 
-        if isinstance(split_parts, list): #this is a multipart email
+        if isinstance(split_parts, list): # this is a multipart email
             for p in split_parts:
-                final_filename = p.get_filename('body') #fallback if multipart, but not an attachment
+                final_filename = p.get_filename('body') # fallback if multipart, but not an attachment
                 encoding = p.get('Content-Transfer-Encoding')
                 tmp_filedesc, tmp_filepath, tmp_size = fill_file(p.get_payload(), encoding)
                 processed_parts.append( (tmp_filepath, final_filename, tmp_size) )
@@ -139,12 +167,14 @@ class mbox_to_git(object):
         return (subject, processed_parts)
 
     def create_summary(self, processed_parts):
+        """ Returns list of [name saved on disk:name when retrieved:size of part] """
         summary = []
         for fp, final_name, fsize in processed_parts:
             summary.append("%s:%s:%i" % (os.path.basename(fp), final_name, fsize))
         return summary
 
     def make_commit(self, subject, summary):
+        """ Receives subject name and file summary and commits it to git log """
         commands = [ 'git add .',
                      'git commit -m "%s" -m "%s"' % (subject, '\n'.join(summary)) ]
 
@@ -155,35 +185,52 @@ class mbox_to_git(object):
         return self.head_id
 
     def make_secret_commit(self, subject, summary):
-        ignored_files = []
-        added_files = ['git add .gitignore', 'git add .gitsecret/paths/mapping.cfg']
-        encrypted_summary = []
+        """ Creates a new commit in the git tree including
+            all attachments, the body text uploaded as 'body',
+            and the git log header matching the email subject.
+
+            The files will have .secret affixed to them,
+            becoming their new file identity, signifying that
+            a private key would be required to decrypt the key
+            even after attaining the file.
+        """
+        git_secret_add_cmds = []
+        git_add_cmds = ['git add .gitignore', 'git add .gitsecret/paths/mapping.cfg']
+        revised_summary = []
+
         with open(os.path.join(self.repodir, '.gitignore'), 'a') as gi:
             for s in summary:
-                orig_name = s.split(':')[0]
-                ignored_files.append("git secret add %s" % orig_name)
-                added_files.append("git add %s.secret" % orig_name)
-                encrypted_summary.append(s.replace(':', '.secret:', 1))
-                gi.write("%s\n" % orig_name)
+                rnd_name = s.split(':')[0]
+                # git secret add does two things:
+                # 1) encrypts FILE and produces FILE.secret
+                git_secret_add_cmds.append("git secret add %s" % rnd_name)
+                # 2) requires FILE to be added to .gitignore
+                gi.write("%s\n" % rnd_name)
 
-        for ifile in ignored_files:
-            subprocess.run(shlex.split(ifile),
+                # git add the encrypted file with added suffix
+                git_add_cmds.append("git add %s.secret" % rnd_name)
+                # ensure the git commit longform contains the fn update
+                revised_summary.append(s.replace(':', '.secret:', 1))
+
+        for cmd in git_secret_add_cmds:
+            subprocess.run(shlex.split(cmd),
                            cwd=self.repodir,
                            stdout=subprocess.DEVNULL)
 
+        # -F required to do encryption of only newly added files, instead of all
         subprocess.run(shlex.split('git secret hide -F -d'),
                        cwd=self.repodir,
                        stdout=subprocess.DEVNULL,
                        stderr=subprocess.DEVNULL)
 
-        for afile in added_files:
-            subprocess.run(shlex.split(afile),
+        for cmd in git_add_cmds:
+            subprocess.run(shlex.split(cmd),
                            cwd=self.repodir,
                            stdout=subprocess.DEVNULL)
 
-        command = 'git commit -m "%s" -m "%s"' % (subject,
-                                                  '\n'.join(encrypted_summary))
-        subprocess.run(shlex.split(command),
+        cmd = 'git commit -m "%s" -m "%s"' % (subject,
+                                             '\n'.join(revised_summary))
+        subprocess.run(shlex.split(cmd),
                        cwd=self.repodir,
                        stdout=subprocess.DEVNULL)
 
@@ -191,38 +238,44 @@ class mbox_to_git(object):
 
     @property
     def head_id(self):
+        """ Returns commit hash of the current HEAD """
         cmp_proc = subprocess.run(shlex.split('git rev-parse HEAD'),
                                   cwd=self.repodir,
                                   stdout=subprocess.PIPE,
                                   stderr=subprocess.DEVNULL,
                                   text=True)
         if cmp_proc.returncode == 128:
-            return None
+            return None # triggers on dir not yet git init-ed
         else:
             return cmp_proc.stdout.strip()
 
     @property
     def commit_count(self):
+        """ Returns number of commits in current branch """
         try:
             cmp_proc = subprocess.run(shlex.split('git rev-list --count HEAD'),
                                       cwd=self.repodir,
                                       stdout=subprocess.PIPE,
                                       stderr=subprocess.DEVNULL,
                                       text=True)
-        except (subprocess.CalledProcessError, FileNotFoundError):
+        except FileNotFoundError:
             return 0
         else:
             return int(cmp_proc.stdout.strip()) if cmp_proc.stdout else 0
 
     @property
     def clean(self):
+        """ Returns bool of whether working tree is clean """
         cmp_proc = subprocess.run(shlex.split('git status --porcelain'),
                                   cwd=self.repodir,
-                                  capture_output=True,
+                                  stdout=subprocess.PIPE,
                                   text=True)
         return not bool(cmp_proc.stdout)
 
     def get_commit_of_file(self, fn):
+        """ Traverses commits in reverse for first match of filename fn
+            and returns commit hash
+        """
         cmp_proc = subprocess.run(shlex.split('git rev-list -1 HEAD %s' % fn),
                                   cwd=self.repodir,
                                   stdout=subprocess.PIPE,
@@ -230,49 +283,58 @@ class mbox_to_git(object):
         return cmp_proc.stdout.strip()
 
     def get_commit_filelist(self, commit):
+        """ Construct a list of all files relevant to given commit hash """
         command = 'git show --no-commit-id --name-only -r %s' % commit
         cmp_proc = subprocess.run(shlex.split(command),
                                   cwd=self.repodir,
                                   stdout=subprocess.PIPE,
-                                  stderr=subprocess.DEVNULL,
                                   text=True)
         line_output = cmp_proc.stdout.split('\n')
         
         retval = []
         for line in line_output:
             split = line.split(' ')
+            # expecting a line 'commit ab324298798b ...'
             if len(split[0])==6 and len(split[1])==40 and split[0]=='commit': break
             retval.append(line)
         return retval
 
     def create_tarball(self):
+        """ Create tarball containing files of only HEAD commit.
+            Changing the head may be entirely unnecessary because
+            all files are going to be named with mkstemp so there
+            is no collision in that space. """
         command = "git show --no-commit-id --name-only -r %s" % self.head_id
-        show_process = subprocess.run(shlex.split(command),
-                                      cwd=self.repodir,
-                                      stdout=subprocess.PIPE,
-                                      text=True)
+        cmp_proc = subprocess.run(shlex.split(command),
+                                  cwd=self.repodir,
+                                  stdout=subprocess.PIPE,
+                                  text=True)
 
         files = []
-        for line in show_process.stdout.split('\n'):
+        # files are demarcated by 'commit abcdef1234...' line
+        for line in cmp_proc.stdout.split('\n'):
             if line.startswith('commit '):
                 break
             else:
                 files.append(line)
 
-        renames = {}
-        for line in show_process.stdout.split('\n'):
+        file_mapping = []
+        # iterate stdout again to catch summary mapping below commit info
+        # this allows us to return the human-expected name rather than the mkstep
+        for line in cmp_proc.stdout.split('\n'):
             if line.count(':') == 2:
                 rnd, orig, size = line.split(':')
                 rnd = rnd.strip()
-                if rnd in files:
-                    renames[rnd] = orig
+                if rnd in files: # if this line matches a known-file identified above
+                    file_mapping.append( (rnd, orig) )
 
         script_path=os.path.dirname(os.path.realpath(__file__))
+        # this file is created outside the repo tree, in the script path
         tarball_fp=os.path.join(script_path, 'commit.tar')
 
         import tarfile
         tar = tarfile.open(tarball_fp, 'w')
-        for random_name, original_name in renames.items():
+        for random_name, original_name in file_mapping:
             added_filepath = os.path.join(self.repodir, random_name)
             tar.add(added_filepath, arcname=original_name)
         tar.close()
