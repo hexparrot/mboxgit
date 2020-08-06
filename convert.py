@@ -300,6 +300,10 @@ class mbox_to_git(object):
         return retval
 
     def create_tarball(self):
+        """ Create tarball containing files of only HEAD commit.
+            Changing the head may be entirely unnecessary because
+            all files are going to be named with mkstemp so there
+            is no collision in that space. """
         command = "git show --no-commit-id --name-only -r %s" % self.head_id
         show_process = subprocess.run(shlex.split(command),
                                       cwd=self.repodir,
@@ -307,6 +311,7 @@ class mbox_to_git(object):
                                       text=True)
 
         files = []
+        # files are demarcated by 'commit abcdef1234...' line
         for line in show_process.stdout.split('\n'):
             if line.startswith('commit '):
                 break
@@ -314,6 +319,8 @@ class mbox_to_git(object):
                 files.append(line)
 
         renames = {}
+        # iterate stdout again to catch summary mapping below commit info
+        # this allows us to return the human-expected name rather than the mkstep
         for line in show_process.stdout.split('\n'):
             if line.count(':') == 2:
                 rnd, orig, size = line.split(':')
@@ -322,6 +329,7 @@ class mbox_to_git(object):
                     renames[rnd] = orig
 
         script_path=os.path.dirname(os.path.realpath(__file__))
+        # this file is created outside the repo tree, in the script path
         tarball_fp=os.path.join(script_path, 'commit.tar')
 
         import tarfile
