@@ -305,28 +305,28 @@ class mbox_to_git(object):
             all files are going to be named with mkstemp so there
             is no collision in that space. """
         command = "git show --no-commit-id --name-only -r %s" % self.head_id
-        show_process = subprocess.run(shlex.split(command),
-                                      cwd=self.repodir,
-                                      stdout=subprocess.PIPE,
-                                      text=True)
+        cmp_proc = subprocess.run(shlex.split(command),
+                                  cwd=self.repodir,
+                                  stdout=subprocess.PIPE,
+                                  text=True)
 
         files = []
         # files are demarcated by 'commit abcdef1234...' line
-        for line in show_process.stdout.split('\n'):
+        for line in cmp_proc.stdout.split('\n'):
             if line.startswith('commit '):
                 break
             else:
                 files.append(line)
 
-        renames = {}
+        file_mapping = []
         # iterate stdout again to catch summary mapping below commit info
         # this allows us to return the human-expected name rather than the mkstep
-        for line in show_process.stdout.split('\n'):
+        for line in cmp_proc.stdout.split('\n'):
             if line.count(':') == 2:
                 rnd, orig, size = line.split(':')
                 rnd = rnd.strip()
-                if rnd in files:
-                    renames[rnd] = orig
+                if rnd in files: # if this line matches a known-file identified above
+                    file_mapping.append( (rnd, orig) )
 
         script_path=os.path.dirname(os.path.realpath(__file__))
         # this file is created outside the repo tree, in the script path
@@ -334,7 +334,7 @@ class mbox_to_git(object):
 
         import tarfile
         tar = tarfile.open(tarball_fp, 'w')
-        for random_name, original_name in renames.items():
+        for random_name, original_name in file_mapping:
             added_filepath = os.path.join(self.repodir, random_name)
             tar.add(added_filepath, arcname=original_name)
         tar.close()
