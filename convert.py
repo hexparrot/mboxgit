@@ -226,7 +226,7 @@ class mbox_to_git(object):
                                       stdout=subprocess.PIPE,
                                       stderr=subprocess.DEVNULL,
                                       text=True)
-        except (subprocess.CalledProcessError, FileNotFoundError):
+        except FileNotFoundError:
             return 0
         else:
             return int(cmp_proc.stdout.strip()) if cmp_proc.stdout else 0
