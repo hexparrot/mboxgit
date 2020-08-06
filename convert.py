@@ -124,7 +124,14 @@ class mbox_to_git(object):
                            cwd=self.repodir)
 
     def process_email(self, email):
+        """ Processes individual emails in mbox-style box r/o.
+            Identifies multipart emails and splits body and attachments
+            all into separate files implemented with mkstemp.
+        """
         def fill_file(data, encoding='ascii'):
+            """ Receives data BASE64/ASCII and writes it to "temporary" file.
+                Returns filedescriptor, path, and size of resultant file.
+            """
             ascii_as_bytes = data.encode('ascii')
             if encoding == 'base64':
                 import base64
@@ -133,6 +140,7 @@ class mbox_to_git(object):
                 message_bytes = ascii_as_bytes
 
             import tempfile
+            # create file directly in repopath, does not unlink
             t_filedesc, t_filepath = tempfile.mkstemp(prefix='', dir=self.repodir)
             open_file = open(t_filepath, 'w+b')
             open_file.write(message_bytes)
@@ -145,9 +153,9 @@ class mbox_to_git(object):
         split_parts = email.get_payload()
         subject = email.get('subject')
 
-        if isinstance(split_parts, list): #this is a multipart email
+        if isinstance(split_parts, list): # this is a multipart email
             for p in split_parts:
-                final_filename = p.get_filename('body') #fallback if multipart, but not an attachment
+                final_filename = p.get_filename('body') # fallback if multipart, but not an attachment
                 encoding = p.get('Content-Transfer-Encoding')
                 tmp_filedesc, tmp_filepath, tmp_size = fill_file(p.get_payload(), encoding)
                 processed_parts.append( (tmp_filepath, final_filename, tmp_size) )
@@ -159,12 +167,14 @@ class mbox_to_git(object):
         return (subject, processed_parts)
 
     def create_summary(self, processed_parts):
+        """ Returns list of [name saved on disk:name when retrieved:size of part] """
         summary = []
         for fp, final_name, fsize in processed_parts:
             summary.append("%s:%s:%i" % (os.path.basename(fp), final_name, fsize))
         return summary
 
     def make_commit(self, subject, summary):
+        """ Receives subject name and file summary and commits it to git log """
         commands = [ 'git add .',
                      'git commit -m "%s" -m "%s"' % (subject, '\n'.join(summary)) ]
 
@@ -228,18 +238,20 @@ class mbox_to_git(object):
 
     @property
     def head_id(self):
+        """ Returns commit hash of the current HEAD """
         cmp_proc = subprocess.run(shlex.split('git rev-parse HEAD'),
                                   cwd=self.repodir,
                                   stdout=subprocess.PIPE,
                                   stderr=subprocess.DEVNULL,
                                   text=True)
         if cmp_proc.returncode == 128:
-            return None
+            return None # triggers on dir not yet git init-ed
         else:
             return cmp_proc.stdout.strip()
 
     @property
     def commit_count(self):
+        """ Returns number of commits in current branch """
         try:
             cmp_proc = subprocess.run(shlex.split('git rev-list --count HEAD'),
                                       cwd=self.repodir,
@@ -253,6 +265,7 @@ class mbox_to_git(object):
 
     @property
     def clean(self):
+        """ Returns bool of whether working tree is clean """
         cmp_proc = subprocess.run(shlex.split('git status --porcelain'),
                                   cwd=self.repodir,
                                   stdout=subprocess.PIPE,
@@ -260,6 +273,9 @@ class mbox_to_git(object):
         return not bool(cmp_proc.stdout)
 
     def get_commit_of_file(self, fn):
+        """ Traverses commits in reverse for first match of filename fn
+            and returns commit hash
+        """
         cmp_proc = subprocess.run(shlex.split('git rev-list -1 HEAD %s' % fn),
                                   cwd=self.repodir,
                                   stdout=subprocess.PIPE,
@@ -267,6 +283,7 @@ class mbox_to_git(object):
         return cmp_proc.stdout.strip()
 
     def get_commit_filelist(self, commit):
+        """ Construct a list of all files relevant to given commit hash """
         command = 'git show --no-commit-id --name-only -r %s' % commit
         cmp_proc = subprocess.run(shlex.split(command),
                                   cwd=self.repodir,
@@ -277,6 +294,7 @@ class mbox_to_git(object):
         retval = []
         for line in line_output:
             split = line.split(' ')
+            # expecting a line 'commit ab324298798b ...'
             if len(split[0])==6 and len(split[1])==40 and split[0]=='commit': break
             retval.append(line)
         return retval
