@@ -235,7 +235,7 @@ class mbox_to_git(object):
     def clean(self):
         cmp_proc = subprocess.run(shlex.split('git status --porcelain'),
                                   cwd=self.repodir,
-                                  capture_output=True,
+                                  stdout=subprocess.PIPE,
                                   text=True)
         return not bool(cmp_proc.stdout)
 
@@ -251,7 +251,6 @@ class mbox_to_git(object):
         cmp_proc = subprocess.run(shlex.split(command),
                                   cwd=self.repodir,
                                   stdout=subprocess.PIPE,
-                                  stderr=subprocess.DEVNULL,
                                   text=True)
         line_output = cmp_proc.stdout.split('\n')
         
