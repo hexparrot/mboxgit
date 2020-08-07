@@ -129,15 +129,19 @@ class mbox_to_git(object):
             Identifies multipart emails and splits body and attachments
             all into separate files implemented with mkstemp.
         """
-        def fill_file(data, encoding='ascii'):
+        def fill_file(data, encoding):
             """ Receives data BASE64/ASCII and writes it to "temporary" file.
                 Returns filedescriptor, path, and size of resultant file.
             """
-            ascii_as_bytes = data.encode('ascii')
             if encoding == 'base64':
                 import base64
+                ascii_as_bytes = data.encode('ascii')
                 message_bytes = base64.b64decode(ascii_as_bytes)
+            elif encoding == '8bit':
+                ascii_as_bytes = data.encode('UTF-8')
+                message_bytes = ascii_as_bytes
             else:
+                ascii_as_bytes = data.encode('ascii')
                 message_bytes = ascii_as_bytes
 
             import tempfile
@@ -161,8 +165,9 @@ class mbox_to_git(object):
                 tmp_filedesc, tmp_filepath, tmp_size = fill_file(p.get_payload(), encoding)
                 processed_parts.append( (tmp_filepath, final_filename, tmp_size) )
         else: #single part email means content provided directly as string
+            encoding = email.get('Content-Transfer-Encoding', None)
             final_filename = 'body'
-            tmp_filedesc, tmp_filepath, tmp_size = fill_file(split_parts)
+            tmp_filedesc, tmp_filepath, tmp_size = fill_file(split_parts, encoding)
             processed_parts.append( (tmp_filepath, final_filename, tmp_size) )
 
         return (subject, processed_parts)

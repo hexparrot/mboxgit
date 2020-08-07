@@ -48,7 +48,7 @@ class Testmbox_to_git(unittest.TestCase):
 
     def test_identifies_correct_message_count(self):
         with mbox_to_git(MBOX_FP) as instance:
-            self.assertEqual(len(instance.messages), 3)
+            self.assertEqual(len(instance.messages), 4)
 
     def test_create_gitrepo_dir(self):
         self.assertFalse(os.path.exists(REPO_FP))
@@ -334,6 +334,11 @@ class Testmbox_to_git(unittest.TestCase):
             except ExceptionType:
                 self.fail("this should not have thrown anything")
 
+    def test_inbound_utf_encoding(self):
+        with mbox_to_git(MBOX_FP) as instance:
+            instance.init_repo()
+            subject, files_produced = instance.process_email(instance.messages[3])
+            short_commit = instance.make_commit(subject, files_produced)
 
 
 if __name__ == '__main__':
