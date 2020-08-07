@@ -340,6 +340,23 @@ class Testmbox_to_git(unittest.TestCase):
             subject, files_produced = instance.process_email(instance.messages[3])
             short_commit = instance.make_commit(subject, files_produced)
 
+    def test_empty_mbox_after_processing(self):
+        from shutil import copyfile
+        newfile = 'mbox.throwaway'
+        copyfile(MBOX_FP, newfile)
+
+        with mbox_to_git(newfile) as instance:
+            instance.init_repo()
+
+            mbox_size = os.stat(newfile).st_size
+            for e in instance.messages:
+                subject, files_produced = instance.process_email(e)
+                short_commit = instance.make_commit(subject, files_produced)
+            instance.clear_inbox()
+            self.assertNotEqual(os.stat(newfile).st_size, mbox_size)
+            self.assertEqual(os.stat(newfile).st_size, 0)
+        os.unlink(newfile)
+
 
 if __name__ == '__main__':
     unittest.main()

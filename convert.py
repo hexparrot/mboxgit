@@ -65,6 +65,10 @@ class mbox_to_git(object):
         self.mailbox.unlock()
         self.mailbox.close()
 
+    def clear_inbox(self):
+        self.mailbox.clear()
+        self.mailbox.flush()
+
     @Decorators.check_clean_after
     def init_repo(self,
                   encrypted=False):
