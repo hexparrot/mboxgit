@@ -346,14 +346,16 @@ class mbox_to_git(object):
 
 if __name__ == '__main__':
     with mbox_to_git('mbox.sample') as instance:
-        instance.init_repo()
+        try:
+            instance.init_repo()
+        except FileExistsError:
+            pass
+
         for msg in instance.messages:
             subject, files_produced = instance.process_email(msg)
-            summary = instance.create_summary(files_produced)
-            commit_id = instance.make_commit(subject, summary)
+            commit_id = instance.make_commit(subject, files_produced)
 
             print("%s: %s" % (commit_id, subject))
-            for s in summary:
-                p = s.split(':')
-                print("%s -> %s (%s)" % (p[0], p[1], p[2]))
+            for path, fn, size in files_produced:
+                print("%s -> %s (%s)" % (os.path.basename(path), fn, size))
 
