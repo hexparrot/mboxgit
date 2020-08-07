@@ -141,11 +141,8 @@ class mbox_to_git(object):
                 import base64
                 ascii_as_bytes = data.encode('ascii')
                 message_bytes = base64.b64decode(ascii_as_bytes)
-            elif encoding == '8bit':
-                ascii_as_bytes = data.encode('UTF-8')
-                message_bytes = ascii_as_bytes
-            else:
-                ascii_as_bytes = data.encode('ascii')
+            else: # ['8bit','ascii','quoted-printable']
+                ascii_as_bytes = data.encode('utf-8')
                 message_bytes = ascii_as_bytes
 
             import tempfile
@@ -158,21 +155,50 @@ class mbox_to_git(object):
 
             return (t_filedesc, t_filepath, len(message_bytes))
 
-        processed_parts = []
-        split_parts = email.get_payload()
-        subject = email.get('subject')
+        def flatten(parts):
+            """ To help edge cases where there are multiple nested emails within emails,
+                this function will (FIRST) check if the passed message_part is
+                actually just a list, presumably of more email.message.Message.
+                (SECOND) if the part is just a string, it is the body text and
+                (THIRD) if it is none of the above, its likely email.message.Message.
+                If this is the case, before recursing, check if one-level-deeper is str.
+                If it is a string, then this is a message ready for direct parsing
+                as a multi-message part.
+            """
+            if isinstance(parts, list):
+                for i in parts:
+                    yield from flatten(i)
+            elif isinstance(parts, str):
+                yield parts
+            else:
+                check_inside = parts.get_payload()
+                if isinstance(check_inside, str):
+                    yield parts
+                else:
+                    yield from flatten(check_inside)
 
-        if isinstance(split_parts, list): # this is a multipart email
-            for p in split_parts:
-                final_filename = p.get_filename('body') # fallback if multipart, but not an attachment
-                encoding = p.get('Content-Transfer-Encoding')
-                tmp_filedesc, tmp_filepath, tmp_size = fill_file(p.get_payload(), encoding)
-                processed_parts.append( (tmp_filepath, final_filename, tmp_size) )
-        else: #single part email means content provided directly as string
-            encoding = email.get('Content-Transfer-Encoding', None)
-            final_filename = 'body'
-            tmp_filedesc, tmp_filepath, tmp_size = fill_file(split_parts, encoding)
+        processed_parts = []
+
+        for e in flatten(email.get_payload()):
+            try:
+                # if e is email.message.Message
+                data = e.get_payload()
+                final_filename = e.get_filename('body')
+                encoding = e.get('Content-Transfer-Encoding', None)
+            except AttributeError:
+                # because e is just a string
+                data = e
+                final_filename = 'body'
+                if isinstance(e, str):
+                    encoding = 'ascii'
+                elif isinstance(e, unicode):
+                    encoding = '8bit'
+            finally:
+                tmp_filedesc, tmp_filepath, tmp_size = fill_file(data, encoding)
+
             processed_parts.append( (tmp_filepath, final_filename, tmp_size) )
+
+        subject = email.get('subject')
 
         return (subject, processed_parts)
 
