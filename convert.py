@@ -67,30 +67,26 @@ class mbox_to_git(object):
 
     @Decorators.check_clean_after
     def init_repo(self,
-                  abort_if_exists=False,
                   encrypted=False):
+        commands = ['git init']
         try:
             os.mkdir(self.repodir)
         except FileExistsError:
-            if abort_if_exists:
-                raise RuntimeError("repo path already exists--it shouldn't before init_repo!")
+            if encrypted:
+                if os.path.exists(os.path.join(self.repodir, '.gitsecret')):
+                    raise FileExistsError("Cannot secret re-init a repo.")
+            else:
+                raise FileExistsError("Cannot re-init a repo.")
 
-        # TODO: determine way these commands do not need to run,
-        #       e.g., production use when repo always will exist on instantiation.
-        subprocess.run(shlex.split('git init'),
-                       cwd=self.repodir,
-                       stdout=subprocess.DEVNULL)
-
-        # TODO: this could cause noise on repeats (although otherwise not truly impactful)
         if encrypted:
-            commands = [ 'git secret init',
-                         'git add .',
-                         'git commit -m "initializing git-secret module"' ]
+            commands.extend([ 'git secret init',
+                              'git add .',
+                              'git commit -m "initializing git-secret module"' ])
 
-            for c in commands:
-                subprocess.call(shlex.split(c),
-                                cwd=self.repodir,
-                                stdout=subprocess.DEVNULL)
+        for c in commands:
+            subprocess.call(shlex.split(c),
+                            cwd=self.repodir,
+                            stdout=subprocess.DEVNULL)
 
         # TODO: this will also need to eventually accept user input
         from getpass import getuser

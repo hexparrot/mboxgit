@@ -166,9 +166,11 @@ class Testmbox_to_git(unittest.TestCase):
     def test_init_repo_graceful_reuse(self):
         with mbox_to_git(MBOX_FP) as instance:
             instance.init_repo()
-            instance.init_repo(abort_if_exists=False)
-            with self.assertRaises(RuntimeError):
-                instance.init_repo(abort_if_exists=True)
+            with self.assertRaises(FileExistsError):
+                instance.init_repo()
+            instance.init_repo(encrypted=True)
+            with self.assertRaises(FileExistsError):
+                instance.init_repo(encrypted=True)
 
     def test_get_git_head_commit(self):
         with mbox_to_git(MBOX_FP) as instance:
