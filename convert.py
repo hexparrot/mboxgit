@@ -155,50 +155,16 @@ class mbox_to_git(object):
 
             return (t_filedesc, t_filepath, len(message_bytes))
 
-        def flatten(parts):
-            """ To help edge cases where there are multiple nested emails within emails,
-                this function will (FIRST) check if the passed message_part is
-                actually just a list, presumably of more email.message.Message.
-                (SECOND) if the part is just a string, it is the body text and
-                (THIRD) if it is none of the above, its likely email.message.Message.
-                If this is the case, before recursing, check if one-level-deeper is str.
-                If it is a string, then this is a message ready for direct parsing
-                as a multi-message part.
-            """
-            if isinstance(parts, list):
-                for i in parts:
-                    yield from flatten(i)
-            elif isinstance(parts, str):
-                yield parts
-            else:
-                check_inside = parts.get_payload()
-                if isinstance(check_inside, str):
-                    yield parts
-                else:
-                    yield from flatten(check_inside)
-
         processed_parts = []
-
-        for e in flatten(email.get_payload()):
-            try:
-                # if e is email.message.Message
-                data = e.get_payload()
-                final_filename = e.get_filename('body')
-                encoding = e.get('Content-Transfer-Encoding', None)
-            except AttributeError:
-                # because e is just a string
-                data = e
-                final_filename = 'body'
-                if isinstance(e, str):
-                    encoding = 'ascii'
-                elif isinstance(e, unicode):
-                    encoding = '8bit'
-            finally:
-                tmp_filedesc, tmp_filepath, tmp_size = fill_file(data, encoding)
-
-            processed_parts.append( (tmp_filepath, final_filename, tmp_size) )
-
         subject = email.get('subject')
+
+        for e in email.walk():
+            payload = e.get_payload()
+            if not isinstance(payload, list):
+                final_filename = e.get_filename('body')
+                encoding = e.get('Content-Transfer-Encoding')
+                tmp_filedesc, tmp_filepath, tmp_size = fill_file(payload, encoding)
+                processed_parts.append( (tmp_filepath, final_filename, tmp_size) )
 
         return (subject, processed_parts)
 
