@@ -157,14 +157,32 @@ class mbox_to_git(object):
 
         processed_parts = []
         subject = email.get('subject')
+        counter = { 'major': 0, 'minor': 0 }
 
         for e in email.walk():
             payload = e.get_payload()
             if not isinstance(payload, list):
-                final_filename = e.get_filename('body')
+                prescribed_filename = e.get_filename()
+                if prescribed_filename:
+                    final_filename = prescribed_filename
+                else: # each time a non-prescribed_filename shows up, increment counter
+                    if not counter['major'] and not counter['minor']:
+                        # but for first body of each email, give it the less-noisy name
+                        # considered chr(ord()) but it will break with bad characters
+                        # after ord('a') + 26
+                        final_filename = 'body'
+                    else:
+                        final_filename = 'body_%s_%i' % (str(counter['major']).zfill(2), counter['minor'])
+                    counter['minor'] += 1
+                    counter['major'] += 1
+
                 encoding = e.get('Content-Transfer-Encoding')
                 tmp_filedesc, tmp_filepath, tmp_size = fill_file(payload, encoding)
                 processed_parts.append( (tmp_filepath, final_filename, tmp_size) )
+            else:
+                # ignore processing mboxMessages that contain lists because
+                # they are already going to be processed with walk, anyway
+                counter['minor'] = 0
 
         return (subject, processed_parts)
 
@@ -346,7 +364,7 @@ class mbox_to_git(object):
         return tarball_fp
 
 if __name__ == '__main__':
-    with mbox_to_git('mbox.sample') as instance:
+    with mbox_to_git('rf-mime-torture-test-1.0.mbox') as instance:
         try:
             instance.init_repo()
         except FileExistsError:

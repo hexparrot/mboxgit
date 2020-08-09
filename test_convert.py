@@ -357,6 +357,38 @@ class Testmbox_to_git(unittest.TestCase):
             self.assertEqual(os.stat(newfile).st_size, 0)
         os.unlink(newfile)
 
+    def test_mbox_torture_test(self):
+        """ this mbox has many, many parts. it will produce 24 files,
+            of which, 17 are body content emails.
+        """
+        with mbox_to_git('rf-mime-torture-test-1.0.mbox') as instance:
+            instance.init_repo()
+            for e in instance.messages:
+                subject, files_produced = instance.process_email(e)
+                commit = instance.make_commit(subject, files_produced)
+
+                src_filenames = [s[1] for s in files_produced]
+                renames = {}
+                for rnd, orig, _ in files_produced:
+                    renames[orig] = os.path.basename(rnd)
+
+                file_created = instance.create_tarball()
+                self.assertTrue(os.path.isfile(file_created))
+
+                import tarfile
+
+                self.assertTrue(tarfile.is_tarfile(file_created))
+                with tarfile.TarFile(file_created, 'r') as tf:
+                    self.assertEqual(set(tf.getnames()), set(src_filenames))
+                    self.assertEqual(len(tf.getmembers()), 24)
+                    count_bodies = 0
+                    count_actual_body = 0 #matching 'body' exactly
+                    for m in tf.getmembers():
+                        if m.name.startswith('body'): count_bodies += 1
+                        if m.name == ('body'): count_actual_body += 1
+                        file_on_disk = os.path.join(instance.repodir, renames[m.name])
+                    self.assertEqual(count_bodies, 17)
+                    self.assertEqual(count_actual_body, 1)
 
 if __name__ == '__main__':
     unittest.main()
