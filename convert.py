@@ -72,7 +72,7 @@ class mbox_to_git(object):
     @Decorators.check_clean_after
     def init_repo(self,
                   encrypted=False):
-        commands = ['git init']
+        commands = ['git init --initial-branch="main"']
         try:
             os.mkdir(self.repodir)
         except FileExistsError:
