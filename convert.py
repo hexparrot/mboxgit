@@ -82,11 +82,6 @@ class mbox_to_git(object):
             else:
                 raise FileExistsError("Cannot re-init a repo.")
 
-        if encrypted:
-            commands.extend([ 'git secret init',
-                              'git add .',
-                              'git commit -m "initializing git-secret module"' ])
-
         for c in commands:
             subprocess.call(shlex.split(c),
                             cwd=self.repodir,
@@ -95,6 +90,16 @@ class mbox_to_git(object):
         # TODO: this will also need to eventually accept user input
         from getpass import getuser
         self.set_user(getuser(), "%s@local" % getuser())
+
+        if encrypted:
+            commands = [ 'git secret init',
+                         'git add .',
+                         'git commit -m "initializing git-secret module"' ]
+
+        for c in commands:
+            subprocess.call(shlex.split(c),
+                            cwd=self.repodir,
+                            stdout=subprocess.DEVNULL)
 
     @Decorators.check_clean_before
     @Decorators.check_clean_after
