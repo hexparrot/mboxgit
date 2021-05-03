@@ -368,6 +368,9 @@ if __name__ == '__main__':
     from getpass import getuser
 
     parser = ArgumentParser(description='mbox to git repo converter')
+    parser.add_argument('-m',
+                        default='rf-mime-torture-test-1.0.mbox',
+                        help='filepath to mbox')
     parser.add_argument('-e',
                         action='store_true',
                         dest='use_encryption',
@@ -376,7 +379,7 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
 
-    with mbox_to_git('rf-mime-torture-test-1.0.mbox') as instance:
+    with mbox_to_git(args.m) as instance:
         try:
             instance.init_repo(encrypted=args.use_encryption)
         except FileExistsError:
