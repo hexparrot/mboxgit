@@ -364,15 +364,30 @@ class mbox_to_git(object):
         return tarball_fp
 
 if __name__ == '__main__':
+    from argparse import ArgumentParser
+    from getpass import getuser
+
+    parser = ArgumentParser(description='mbox to git repo converter')
+    parser.add_argument('-e',
+                        action='store_true',
+                        dest='use_encryption',
+                        default=False,
+                        help='implement git secret')
+
+    args = parser.parse_args()
+
     with mbox_to_git('rf-mime-torture-test-1.0.mbox') as instance:
         try:
-            instance.init_repo()
+            instance.init_repo(encrypted=args.use_encryption)
         except FileExistsError:
             pass
 
         for msg in instance.messages:
             subject, files_produced = instance.process_email(msg)
-            commit_id = instance.make_commit(subject, files_produced)
+            if args.use_encryption:
+                commit_id = instance.make_secret_commit(subject, files_produced)
+            else:
+                commit_id = instance.make_commit(subject, files_produced)
 
             print("%s: %s" % (commit_id, subject))
             for path, fn, size in files_produced:
