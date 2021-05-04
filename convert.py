@@ -370,29 +370,31 @@ class mbox_to_git(object):
 
 if __name__ == '__main__':
     from argparse import ArgumentParser
-    from getpass import getuser
 
     parser = ArgumentParser(description='mbox to git repo converter')
     parser.add_argument('-m',
+                        dest='mbox_file',
                         default='rf-mime-torture-test-1.0.mbox',
                         help='filepath to mbox')
     parser.add_argument('-e',
-                        action='store_true',
-                        dest='use_encryption',
-                        default=False,
-                        help='implement git secret')
+                        dest='gpg_email',
+                        default=None,
+                        help='implement git secret via provided email address')
 
     args = parser.parse_args()
 
-    with mbox_to_git(args.m) as instance:
+    with mbox_to_git(args.mbox_file) as instance:
         try:
-            instance.init_repo(encrypted=args.use_encryption)
+            instance.init_repo(encrypted=bool(args.gpg_email))
         except FileExistsError:
             pass
+        finally:
+            if args.gpg_email:
+                instance.tell_secret(args.gpg_email)
 
         for msg in instance.messages:
             subject, files_produced = instance.process_email(msg)
-            if args.use_encryption:
+            if args.gpg_email:
                 commit_id = instance.make_secret_commit(subject, files_produced)
             else:
                 commit_id = instance.make_commit(subject, files_produced)
