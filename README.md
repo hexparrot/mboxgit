@@ -4,7 +4,7 @@ python script converts mbox to git repo as alternative fileshare
 # downloading
 
     $ sudo dnf install git git-secret gpg
-    $ sudo dnf install nc #optional
+    $ sudo dnf install nmap-ncat #optional
     $ git clone https://github.com/hexparrot/mboxgit.git
     $ cd mboxgit
     $ ./convert --help
@@ -23,3 +23,17 @@ a public key registered on the host system in gpg:
 
     $ ./convert -m rf-mime-torture-test-1.0.mbox -e will@local
 
+# transferring
+
+open a netcat server on the host to serve `commit.tar`:
+
+    $ ./serve
+    
+or
+
+    $ cat commit.tar | nc --send-only -4 -l -p 8888    # this is the equivalent
+
+on the destination node, receive the file:
+
+    $ nc [hostname/ip] 8888 > commit.tar < /dev/null
+    
